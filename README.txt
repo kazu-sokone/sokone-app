@@ -1,0 +1,1 @@
+Safariで使うためのWebアプリ一式です。index.html と manifest.webmanifest を同じ場所でWeb公開し、iPhoneのSafariから開いて「ホーム画面に追加」します。

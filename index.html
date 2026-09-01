@@ -1,0 +1,61 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f4"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="底値帳"><link rel="manifest" href="manifest.webmanifest">
+<title>カズ専用・底値帳</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f7f4;color:#191919;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+button,input,select,textarea{font:inherit}.app{max-width:760px;margin:auto;padding:16px 14px 100px}
+h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0}
+.legend span{padding:9px 3px;text-align:center;border:2px solid;border-radius:14px;font-size:11px;font-weight:900}
+.f{background:#e5f7e9;color:#176035}.w{background:#fff3c7;color:#705300}.o{background:#ffe2e2;color:#8d2525}.p{background:#eee8ff;color:#5036a0}
+.search{display:grid;grid-template-columns:1fr 92px;gap:8px}.search input,.form input,.form select,.form textarea{width:100%;min-height:50px;border:1px solid #bbb;border-radius:13px;padding:10px 12px;background:#fff;font-size:16px}
+.search button,.primary{border:0;border-radius:13px;background:#1769e0;color:white;font-weight:1000}.guide{text-align:center;color:#777;font-weight:900;padding:30px 5px}
+.group{margin:18px 0}.group h2{font-size:19px}.card{background:#fff;border:1px solid #ddd;border-left:9px solid #ef6d4f;border-radius:17px;padding:13px;margin:9px 0}.best{outline:4px solid #49b768;background:#effaf2}
+.row{display:flex;justify-content:space-between;gap:10px}.price{text-align:right;font-size:42px;font-weight:1000;line-height:1}.best .price{font-size:54px}.unit{text-align:right;font-size:14px;font-weight:1000;margin-top:6px}
+.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.tag{padding:4px 7px;border-radius:999px;background:#eee;font-size:11px;font-weight:900}.date{font-size:12px;color:#666;margin-top:9px}.delta{font-weight:1000;margin-top:7px}.down{color:#188747}.up{color:#c63e3e}.low{font-weight:1000;color:#5c45ab;margin-top:5px}.note{background:#fff4e3;padding:8px;border-radius:10px;margin-top:8px;font-weight:800;font-size:13px}
+.panel{display:none}.panel.active{display:block}.bottom{position:fixed;left:0;right:0;bottom:0;background:#f7f7f4;border-top:1px solid #ddd;padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
+.navs{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.nav{min-height:55px;border:0;border-radius:14px;background:#fff;font-weight:1000}.nav.active{background:#1d1d1f;color:#fff}
+.form{background:#fff;border:1px solid #ddd;border-radius:17px;padding:14px;margin-top:12px}.form h2{margin:0 0 10px}.form label{display:block;font-size:13px;font-weight:900;margin:9px 0 4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.primary{width:100%;min-height:52px;margin-top:12px}.sourcebtn{padding:10px 12px;border:2px solid #ccc;background:#fff;border-radius:999px;font-weight:900;margin:3px}.sourcebtn.active{border-color:#1769e0;background:#eaf2ff}
+</style></head><body><div class="app">
+<h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・価格を最優先表示</div>
+<div class="legend"><span class="f">🟢30日以内</span><span class="w">🟡31〜90日</span><span class="o">🔴91日〜</span><span class="p">🏆過去最安</span></div>
+<section id="products" class="panel active"><div class="search"><input id="q" placeholder="商品名　例：ガーリックトマト"><button id="go">検索</button></div><div id="results" class="guide">商品名を入力して「検索」をタップしてください。</div></section>
+<section id="sources" class="panel"><div id="sourceBtns"></div><div id="sourceResults"></div></section>
+<section id="favorites" class="panel"><div id="favResults"></div></section>
+<section id="add" class="panel">
+<div class="form"><h2>＋価格を登録</h2><label>商品名</label><input id="pn"><label>カテゴリー</label><select id="cat"><option>食品</option><option>洗剤・掃除</option><option>ヘア用品</option><option>日用品</option><option>その他</option></select>
+<div class="grid"><div><label>価格</label><input id="pr" type="number" inputmode="decimal"></div><div><label>登録日</label><input id="dt" type="date"></div></div>
+<div class="grid"><div><label>内容量</label><input id="am" type="number" inputmode="decimal"></div><div><label>単位</label><select id="un"><option>g</option><option>kg</option><option>ml</option><option>L</option><option>個</option><option>枚</option><option>m</option></select></div></div>
+<label>販売元</label><select id="so"></select><label>備考</label><textarea id="no"></textarea><button id="addPrice" class="primary">登録する</button></div>
+<div class="form"><h2>＋販売元を追加</h2><label>名前</label><input id="sn" placeholder="例：田中さん"><label>種類</label><select id="st"><option value="shop">🏬お店</option><option value="person">👤人</option></select><button id="addSource" class="primary">追加する</button></div>
+<div class="form"><h2>バックアップ</h2><button id="backup" class="primary">データを書き出す</button></div>
+</section></div>
+<div class="bottom"><div class="navs"><button class="nav active" data-p="products">🔎<br>商品</button><button class="nav" data-p="sources">🏬<br>販売元</button><button class="nav" data-p="favorites">⭐<br>いつもの</button><button class="nav" data-p="add">＋<br>登録</button></div></div>
+<script>
+const seedS=[{name:"たいらや",type:"shop"},{name:"昭和食品",type:"shop"},{name:"D2",type:"shop"},{name:"コスモス",type:"shop"},{name:"カインズホーム",type:"shop"}];
+const seedD=[
+{id:1,p:"ガーリックトマト",price:150,date:"2025-04-11",source:"たいらや",amount:240,unit:"g",cat:"食品",fav:true},
+{id:2,p:"ガーリックトマト",price:215,date:"2025-09-16",source:"たいらや",amount:240,unit:"g",cat:"食品",fav:true},
+{id:3,p:"ガーリックトマト",price:204,date:"2026-07-23",source:"たいらや",amount:240,unit:"g",cat:"食品",fav:true},
+{id:4,p:"栃木県産コシヒカリ",price:7106,date:"2026-04-22",source:"昭和食品",amount:10,unit:"kg",cat:"食品",fav:true},
+{id:5,p:"栃木県産コシヒカリ",price:6264,date:"2026-07-15",source:"昭和食品",amount:10,unit:"kg",cat:"食品",fav:true},
+{id:6,p:"D2トイレットペーパー",price:690,date:"",source:"D2",amount:600,unit:"m",cat:"日用品",fav:true,note:"50m×12ロール／2個1,298円の記録あり"}
+];
+const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}, put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let S=get("kazuS",seedS),D=get("kazuD",seedD); const $=x=>document.getElementById(x),yen=n=>Number(n).toLocaleString("ja-JP");
+function base(x){let a=+x.amount||0,u=x.unit;if(u==="kg")a*=1000;if(u==="L")a*=1000;let per=(u==="g"||u==="ml")?100:1;return {v:a?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}}
+function latest(){let m={};D.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(x=>m[x.p+"|"+x.source+"|"+x.amount+x.unit]=x);return Object.values(m)}
+function hist(x){return D.filter(z=>z.p===x.p&&z.source===x.source).sort((a,b)=>(a.date||"").localeCompare(b.date||""))}
+function card(x,best){let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,del=prev?x.price-prev.price:null,lo=D.filter(z=>z.p===x.p).reduce((a,b)=>a.price<=b.price?a:b),u=base(x);return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="meta"><span class="tag">${S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬"}${x.source}</span><span class="tag">${x.cat}</span></div></div><div><div class="price">${yen(x.price)}<small style="font-size:12px">円</small></div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div><div class="date">📅 登録日：${x.date||"不明"}</div>${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}<div class="low">🏆 過去最安：${yen(lo.price)}円　${lo.date||"日付不明"}　${lo.source}</div>${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`}
+function search(){let q=$("q").value.trim().toLowerCase();if(!q){$("results").innerHTML="商品名を入力してください。";return}let r=latest().filter(x=>x.p.toLowerCase().includes(q));let groups={};r.forEach(x=>(groups[x.p]??=[]).push(x));$("results").className="";$("results").innerHTML=Object.entries(groups).map(([n,a])=>{let vals=a.map(x=>({x,u:base(x).v})).filter(z=>z.u!=null),best=vals.length?vals.reduce((a,b)=>a.u<=b.u?a:b).x:null;return `<div class="group"><h2>${n}</h2>${a.sort((x,y)=>(base(x).v||1e9)-(base(y).v||1e9)).map(x=>card(x,best&&x.id===best.id)).join("")}</div>`}).join("")||'<div class="guide">該当する商品がありません。</div>'}
+$("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();search()}});
+function fillSources(){$("so").innerHTML=S.map(s=>`<option>${s.name}</option>`).join("");$("sourceBtns").innerHTML=S.map(s=>`<button class="sourcebtn" data-s="${s.name}">${s.type==="person"?"👤":"🏬"}${s.name}</button>`).join("");document.querySelectorAll(".sourcebtn").forEach(b=>b.onclick=()=>{$("sourceResults").innerHTML=latest().filter(x=>x.source===b.dataset.s).map(x=>card(x,false)).join("")})}
+function favs(){$("favResults").innerHTML=latest().filter(x=>x.fav).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>'}
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n===b));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===b.dataset.p));if(b.dataset.p==="sources")fillSources();if(b.dataset.p==="favorites")favs()});
+let now=new Date();$("dt").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+$("addPrice").onclick=()=>{if(!$("pn").value.trim()||!(+$("pr").value))return alert("商品名と価格を入力してください。");D.push({id:Date.now(),p:$("pn").value.trim(),price:+$("pr").value,date:$("dt").value,source:$("so").value,amount:+$("am").value,unit:$("un").value,cat:$("cat").value,note:$("no").value.trim(),fav:false});put("kazuD",D);alert("登録しました！");$("pn").value="";$("pr").value="";$("no").value=""}
+$("addSource").onclick=()=>{let n=$("sn").value.trim();if(!n)return;if(!S.some(s=>s.name===n)){S.push({name:n,type:$("st").value});put("kazuS",S);fillSources();alert("追加しました！")}}
+$("backup").onclick=()=>{let a=document.createElement("a"),b=new Blob([JSON.stringify({sources:S,data:D},null,2)],{type:"application/json"});a.href=URL.createObjectURL(b);a.download="底値帳バックアップ.json";a.click()}
+fillSources();favs();
+</script></body></html>
