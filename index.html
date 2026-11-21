@@ -51,6 +51,7 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 <div class="form"><h2>バックアップ</h2><button id="backup" class="primary">データを書き出す</button></div>
 </section></div>
 <div class="bottom"><div class="navs"><button class="nav active" data-p="products">🔎<br>商品</button><button class="nav" data-p="sources">🏬<br>販売元</button><button class="nav" data-p="favorites">⭐<br>いつもの</button><button class="nav" data-p="add">＋<br>登録</button></div></div>
+<script src="migration-data.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
@@ -69,6 +70,7 @@ const auth = getAuth(firebaseApp);
 auth.useDeviceLanguage();
 const db = getFirestore(firebaseApp);
 const provider = new GoogleAuthProvider();
+const memoMigration=window.SOKONE_MEMO_MIGRATION||{version:"",sources:[],data:[]};
 
 const seedS=[{name:"たいらや",type:"shop"},{name:"昭和食品",type:"shop"},{name:"D2",type:"shop"},{name:"コスモス",type:"shop"},{name:"カインズホーム",type:"shop"}];
 const seedD=[
@@ -101,34 +103,62 @@ function normalizeItem(x={}){
     searchWords:String(x.searchWords||known.searchWords||"").trim()
   };
 }
-let S=get("kazuS",seedS),D=get("kazuD",seedD).map(normalizeItem);
+function hasLegacyEquivalent(items,record){
+  const known={
+    R0158:{source:"たいらや",price:150,date:"2025-04-11"},
+    R0159:{source:"たいらや",price:215,date:"2025-09-16"},
+    R0160:{source:"たいらや",price:204,date:"2026-07-23"},
+    R0266:{source:"昭和食品",price:7106,date:"2026-04-22"},
+    R0270:{source:"昭和食品",price:6264,date:"2026-07-15"},
+    R0080:{source:"D2",price:690,date:""}
+  }[record.recordId];
+  if(!known)return false;
+  return items.some(x=>x.source===known.source&&Number(x.price)===known.price&&String(x.date||"")===known.date);
+}
+function applyMemoMigration(sources,data,migrations){
+  if(!memoMigration.version||migrations.includes(memoMigration.version))return {sources,data,migrations,added:0};
+  const sm=new Map(sources.map(x=>[x.name,x]));
+  memoMigration.sources.forEach(x=>{if(x?.name&&!sm.has(x.name))sm.set(x.name,x)});
+  const ids=new Set(data.map(x=>String(x.id)));
+  let added=0;
+  memoMigration.data.forEach(record=>{
+    if(ids.has(String(record.id))||hasLegacyEquivalent(data,record))return;
+    data.push(normalizeItem(record));ids.add(String(record.id));added++;
+  });
+  return {sources:[...sm.values()],data,migrations:[...migrations,memoMigration.version],added};
+}
+let S=get("kazuS",seedS),D=get("kazuD",seedD).map(normalizeItem),M=get("kazuMigrations",[]);
+const initialMigration=applyMemoMigration(S,D,M);
+S=initialMigration.sources;D=initialMigration.data;M=initialMigration.migrations;
+putLocal("kazuS",S);putLocal("kazuD",D);putLocal("kazuMigrations",M);
 const $=x=>document.getElementById(x),yen=n=>Number(n).toLocaleString("ja-JP");
 let cloudRef=null,cloudReady=false,applyingCloud=false,unsubscribeCloud=null,currentUser=null;
 function setSync(title,detail="",kind=""){
   $("syncTitle").textContent=title; $("syncTitle").className=kind;
   $("syncDetail").textContent=detail;
 }
-function saveLocal(){putLocal("kazuS",S);putLocal("kazuD",D)}
+function saveLocal(){putLocal("kazuS",S);putLocal("kazuD",D);putLocal("kazuMigrations",M)}
 async function saveAll(){
   saveLocal();
   if(!cloudRef||!cloudReady||applyingCloud)return;
   try{
     setSync("☁️ 同期中…","クラウドへ保存しています。");
-    await setDoc(cloudRef,{sources:S,data:D,updatedAt:serverTimestamp()},{merge:true});
+    await setDoc(cloudRef,{sources:S,data:D,migrations:M,updatedAt:serverTimestamp()},{merge:true});
     setSync("☁️ 同期済み","PC・iPhoneで同じデータを使用中。","synced");
   }catch(e){
     console.error(e); setSync("⚠️ 同期エラー","Firebaseのルールまたは通信状態を確認してください。","syncerror");
   }
 }
 function renderAll(){fillSources();favs();renderProducts($("q")?.value||"")}
-function base(x){let a=+x.amount||0,u=x.unit;if(u==="kg")a*=1000;if(u==="L")a*=1000;let per=(u==="g"||u==="ml")?100:1;return {v:a?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}}
+function base(x){let a=+x.amount||0,u=x.unit;if(u==="kg"){a*=1000;u="g"}if(u==="L"){a*=1000;u="ml"}let per=(u==="g"||u==="ml")?100:1;return {v:a&&Number(x.price)>0?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}}
 function latest(){let m={};D.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(x=>m[x.p+"|"+x.source+"|"+x.amount+x.unit]=x);return Object.values(m)}
 function hist(x){return D.filter(z=>z.p===x.p&&z.source===x.source).sort((a,b)=>(a.date||"").localeCompare(b.date||""))}
 function brandLabel(x){
   let t=x.brandType||"unknown", n=(x.brandName||"").trim();
   if(t==="pb") return `<span class="brandtag pbtag">🏷️ オリジナル・PB${n?"："+n:""}</span>`;
   if(t==="maker") return `<span class="brandtag">🏭 メーカー品${n?"："+n:""}</span>`;
-  return `<span class="brandtag unknowntag">❓ ブランド区分 未確認${n?"："+n:""}</span>`;
+  let label=(x.brandTypeLabel||"未確認").trim();
+  return `<span class="brandtag unknowntag">❓ 区分：${label}${n?"："+n:""}</span>`;
 }
 function productDetails(x){
   let parts=[];
@@ -137,15 +167,16 @@ function productDetails(x){
   return parts.length?`<div class="productdetail">${parts.join("<br>")}</div>`:"";
 }
 function card(x,best){
-  let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,del=prev?x.price-prev.price:null,
-      lo=D.filter(z=>z.p===x.p).reduce((a,b)=>a.price<=b.price?a:b),u=base(x);
+  let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
+      del=prev&&Number(x.price)>0&&Number(prev.price)>0?x.price-prev.price:null,
+      priced=D.filter(z=>z.p===x.p&&Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
   return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b>
   <div class="meta"><span class="tag">${S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬"}${x.source}</span><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
   <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}</div>
-  <div><div class="price">${yen(x.price)}<small style="font-size:12px">円</small></div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
+  <div><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
   <div class="date">📅 登録日：${x.date||"不明"}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
-  <div class="low">🏆 過去最安：${yen(lo.price)}円　${lo.date||"日付不明"}　${lo.source}</div>
+  ${lo?`<div class="low">🏆 過去最安：${yen(lo.price)}円　${lo.date||"日付不明"}　${lo.source}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
   ${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`;
 }
 function renderProducts(q=""){
@@ -219,10 +250,14 @@ onAuthStateChanged(auth,async user=>{
       const dm=new Map(); [...D,...cloudD].forEach(x=>dm.set(String(x.id),x));
       S=[...sm.values()]; D=[...dm.values()].map(normalizeItem);
       applyingCloud=true; saveLocal();renderAll(); applyingCloud=false;
-      await setDoc(cloudRef,{sources:S,data:D,updatedAt:serverTimestamp()},{merge:true});
+      const cloudM=Array.isArray(v.migrations)?v.migrations:[];
+      M=[...new Set([...M,...cloudM])];
+      const migrated=applyMemoMigration(S,D,M);
+      S=migrated.sources;D=migrated.data;M=migrated.migrations;
+      await setDoc(cloudRef,{sources:S,data:D,migrations:M,updatedAt:serverTimestamp()},{merge:true});
     }else{
       // クラウドが空なら、この端末にある既存データを最初のデータとして移行する
-      await setDoc(cloudRef,{sources:S,data:D,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+      await setDoc(cloudRef,{sources:S,data:D,migrations:M,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     }
     cloudReady=true;
     setSync("☁️ 同期済み","PC・iPhoneで同じデータを使用中。","synced");
@@ -231,6 +266,7 @@ onAuthStateChanged(auth,async user=>{
       const v=s.data(); applyingCloud=true;
       if(Array.isArray(v.sources))S=v.sources;
       if(Array.isArray(v.data))D=v.data.map(normalizeItem);
+      if(Array.isArray(v.migrations))M=v.migrations;
       saveLocal();renderAll();applyingCloud=false;
       setSync("☁️ 同期済み","最新データを受信しました。","synced");
     },e=>{console.error(e);setSync("⚠️ 同期エラー","Firestoreのルールを確認してください。","syncerror")});
