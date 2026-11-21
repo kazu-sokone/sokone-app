@@ -18,12 +18,13 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 .pbtag{background:#fff0d7;color:#8a4e00}.unknowntag{background:#eee;color:#666}
 .productdetail{margin-top:6px;color:#666;font-size:12px;line-height:1.55}.productdetail b{color:#333}
 .group{margin:18px 0}.group h2{font-size:19px}.card{background:#fff;border:1px solid #ddd;border-left:9px solid #ef6d4f;border-radius:17px;padding:13px;margin:9px 0}.best{outline:4px solid #49b768;background:#effaf2}
-.row{display:flex;justify-content:space-between;gap:10px}.price{text-align:right;font-size:42px;font-weight:1000;line-height:1}.best .price{font-size:54px}.unit{text-align:right;font-size:14px;font-weight:1000;margin-top:6px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.spec{margin-top:7px;color:#333;font-size:15px;font-weight:1000}.pricebox{min-width:145px}.price{text-align:right;font-size:42px;font-weight:1000;line-height:1}.best .price{font-size:54px}.unit{text-align:right;font-size:14px;font-weight:1000;margin-top:6px}
 .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.tag{padding:4px 7px;border-radius:999px;background:#eee;font-size:11px;font-weight:900}.date{font-size:12px;color:#666;margin-top:9px}.delta{font-weight:1000;margin-top:7px}.down{color:#188747}.up{color:#c63e3e}.low{font-weight:1000;color:#5c45ab;margin-top:5px}.note{background:#fff4e3;padding:8px;border-radius:10px;margin-top:8px;font-weight:800;font-size:13px}
 .panel{display:none}.panel.active{display:block}.bottom{position:fixed;left:0;right:0;bottom:0;background:#f7f7f4;border-top:1px solid #ddd;padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
 .navs{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.nav{min-height:55px;border:0;border-radius:14px;background:#fff;font-weight:1000}.nav.active{background:#1d1d1f;color:#fff}
 .form{background:#fff;border:1px solid #ddd;border-radius:17px;padding:14px;margin-top:12px}.form h2{margin:0 0 10px}.form label{display:block;font-size:13px;font-weight:900;margin:9px 0 4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.primary{width:100%;min-height:52px;margin-top:12px}.sourcebtn{padding:10px 12px;border:2px solid #ccc;background:#fff;border-radius:999px;font-weight:900;margin:3px}.sourcebtn.active{border-color:#1769e0;background:#eaf2ff}
 .syncbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #ddd;border-radius:16px;padding:10px 12px;margin:12px 0}.syncinfo{flex:1;min-width:210px}.syncinfo b{font-size:14px}.syncdetail{font-size:11px;color:#666;margin-top:3px}.syncbtn{border:0;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:1000;background:#1769e0;color:#fff}.syncbtn.secondary{background:#eee;color:#333}.synced{color:#188747}.syncerror{color:#c63e3e}
+@media(max-width:480px){.row{display:block}.pricebox{min-width:0;margin-top:10px}.price,.unit{text-align:left}.best .price{font-size:46px}}
 </style></head><body><div class="app">
 <h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・登録済み商品を一覧表示</div>
 <div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
@@ -84,9 +85,9 @@ const seedD=[
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const putLocal=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const legacyMetadata={
-  "ガーリックトマト":{minorCategory:"パスタソース",searchWords:"パスタソース、スパゲッティソース、トマトソース"},
-  "栃木県産コシヒカリ":{minorCategory:"米",searchWords:"米、お米、コシヒカリ"},
-  "D2トイレットペーパー":{minorCategory:"トイレットペーパー",searchWords:"トイレットペーパー、トイレ紙、ロール"}
+  "ガーリックトマト":{minorCategory:"パスタソース",searchWords:"パスタソース、スパゲッティソース、トマトソース",contentAmount:240,contentUnit:"g",purchaseCount:1},
+  "栃木県産コシヒカリ":{minorCategory:"米",searchWords:"米、お米、コシヒカリ",contentAmount:10,contentUnit:"kg",purchaseCount:1},
+  "D2トイレットペーパー":{minorCategory:"トイレットペーパー",searchWords:"トイレットペーパー、トイレ紙、ロール",rollCount:12,metersPerRoll:50,purchaseCount:1}
 };
 function normalizeItem(x={}){
   const displayName=String(x.displayName||x.p||"").trim();
@@ -100,7 +101,12 @@ function normalizeItem(x={}){
     manufacturerName:String(x.manufacturerName||"").trim(),
     brandName:String(x.brandName||"").trim(),
     brandType:x.brandType||"unknown",
-    searchWords:String(x.searchWords||known.searchWords||"").trim()
+    searchWords:String(x.searchWords||known.searchWords||"").trim(),
+    contentAmount:x.contentAmount??known.contentAmount??null,
+    contentUnit:String(x.contentUnit||known.contentUnit||"").trim(),
+    purchaseCount:x.purchaseCount??known.purchaseCount??1,
+    rollCount:x.rollCount??known.rollCount??null,
+    metersPerRoll:x.metersPerRoll??known.metersPerRoll??null
   };
 }
 function hasLegacyEquivalent(items,record){
@@ -150,7 +156,13 @@ async function saveAll(){
   }
 }
 function renderAll(){fillSources();favs();renderProducts($("q")?.value||"")}
-function base(x){let a=+x.amount||0,u=x.unit;if(u==="kg"){a*=1000;u="g"}if(u==="L"){a*=1000;u="ml"}let per=(u==="g"||u==="ml")?100:1;return {v:a&&Number(x.price)>0?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}}
+function base(x){
+  let a=+x.amount||0,u=x.unit;
+  if(!["g","kg","ml","L","個","枚","m","本","袋"].includes(u)&&Number(x.contentAmount)>0){a=Number(x.contentAmount)*(Number(x.purchaseCount)||1);u=x.contentUnit||""}
+  if(u==="kg"){a*=1000;u="g"}if(u==="L"){a*=1000;u="ml"}
+  let per=(u==="g"||u==="ml")?100:1;
+  return {v:a&&Number(x.price)>0?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}
+}
 function latest(){let m={};D.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(x=>m[x.p+"|"+x.source+"|"+x.amount+x.unit]=x);return Object.values(m)}
 function hist(x){return D.filter(z=>z.p===x.p&&z.source===x.source).sort((a,b)=>(a.date||"").localeCompare(b.date||""))}
 function brandLabel(x){
@@ -166,17 +178,54 @@ function productDetails(x){
   if(x.manufacturerName)parts.push(`<b>メーカー：</b>${x.manufacturerName}`);
   return parts.length?`<div class="productdetail">${parts.join("<br>")}</div>`:"";
 }
+function amountText(value){
+  const n=Number(value);
+  return Number.isFinite(n)?n.toLocaleString("ja-JP",{maximumFractionDigits:3}):String(value??"");
+}
+function specification(x){
+  const memo=String(x.originalMemo||"");
+  const note=String(x.note||"");
+  let parts=[],main="";
+  const rollMatch=memo.match(/(\d+(?:\.\d+)?)\s*m\s*[×xX]\s*(\d+)/i);
+  if(rollMatch){
+    main=`${amountText(rollMatch[1])}m×${amountText(rollMatch[2])}ロール`;
+    const tail=memo.slice((rollMatch.index||0)+rollMatch[0].length),packMatch=tail.match(/(\d+)\s*(個|パック)/);
+    if(packMatch&&Number(packMatch[1])>1)main+=`×${amountText(packMatch[1])}${packMatch[2]}`;
+  }else if(Number(x.metersPerRoll)>0&&Number(x.rollCount)>0){
+    main=`${amountText(x.metersPerRoll)}m×${amountText(x.rollCount)}ロール`;
+  }else if(Number(x.contentAmount)>0){
+    const contentUnit=x.contentUnit||x.unit||"";
+    main=`${amountText(x.contentAmount)}${contentUnit}`;
+    if(Number(x.purchaseCount)>1){
+      const countMatch=memo.match(new RegExp(`${amountText(x.purchaseCount)}\\s*(個|本|袋|パック|箱)`));
+      main+=`×${amountText(x.purchaseCount)}${countMatch?countMatch[1]:"点"}`;
+    }
+  }else if(Number(x.amount)>0&&x.unit){
+    main=`${amountText(x.amount)}${x.unit}`;
+  }else{
+    main="容量未確認";
+  }
+  if(x.p==="ゴミ袋"){
+    const capacity=(memo+" "+note).match(/(?:^|\s)(\d+(?:\.\d+)?)\s*L(?:\s|・|$)/i);
+    const thickness=(memo+" "+note).match(/(?:厚み)?\s*(\d+(?:\.\d+)?)\s*mm/i);
+    if(capacity&&!main.includes(`${capacity[1]}L`))parts.push(`${amountText(capacity[1])}L`);
+    if(thickness)parts.push(`厚み${amountText(thickness[1])}mm`);
+  }
+  if(x.p==="ポリ袋"&&/寸法/.test(note))parts.push(note.replace("（単位要確認）","（単位未確認）"));
+  parts.push(main);
+  return parts.join("・");
+}
 function card(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
       del=prev&&Number(x.price)>0&&Number(prev.price)>0?x.price-prev.price:null,
       priced=D.filter(z=>z.p===x.p&&Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
-  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b>
+  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="spec">${specification(x)}</div></div>
+  <div class="pricebox"><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
   <div class="meta"><span class="tag">${S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬"}${x.source}</span><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
-  <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}</div>
-  <div><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
+  <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}
   <div class="date">📅 登録日：${x.date||"不明"}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
-  ${lo?`<div class="low">🏆 過去最安：${yen(lo.price)}円　${lo.date||"日付不明"}　${lo.source}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
+  ${lo?`<div class="low">🏆 過去最安：${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}　${lo.source}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
   ${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`;
 }
 function renderProducts(q=""){
