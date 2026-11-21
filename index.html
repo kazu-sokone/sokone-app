@@ -18,8 +18,8 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 .pbtag{background:#fff0d7;color:#8a4e00}.unknowntag{background:#eee;color:#666}
 .productdetail{margin-top:6px;color:#666;font-size:12px;line-height:1.55}.productdetail b{color:#333}
 .group{margin:18px 0}.group h2{font-size:19px}.card{background:#fff;border:1px solid #ddd;border-left:9px solid #ef6d4f;border-radius:17px;padding:13px;margin:9px 0}.best{outline:4px solid #49b768;background:#effaf2}
-.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.spec{margin-top:7px;color:#333;font-size:15px;font-weight:1000}.pricebox{min-width:145px}.price{text-align:right;font-size:42px;font-weight:1000;line-height:1}.best .price{font-size:54px}.unit{text-align:right;font-size:14px;font-weight:1000;margin-top:6px}
-.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.tag{padding:4px 7px;border-radius:999px;background:#eee;font-size:11px;font-weight:900}.date{font-size:12px;color:#666;margin-top:9px}.delta{font-weight:1000;margin-top:7px}.down{color:#188747}.up{color:#c63e3e}.low{font-weight:1000;color:#5c45ab;margin-top:5px}.note{background:#fff4e3;padding:8px;border-radius:10px;margin-top:8px;font-weight:800;font-size:13px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.storename{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:10px;background:#eaf2ff;color:#124f9c;font-size:18px;font-weight:1000;line-height:1.25}.spec{margin-top:8px;color:#333;font-size:15px;font-weight:1000}.pricebox{min-width:145px}.price{text-align:right;font-size:42px;font-weight:1000;line-height:1}.best .price{font-size:54px}.unit{text-align:right;font-size:14px;font-weight:1000;margin-top:6px}
+.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.tag{padding:4px 7px;border-radius:999px;background:#eee;font-size:11px;font-weight:900}.date{font-size:12px;color:#666;margin-top:9px}.delta{font-weight:1000;margin-top:7px}.down{color:#188747}.up{color:#c63e3e}.low{font-weight:1000;color:#5c45ab;margin-top:6px;line-height:1.5}.historyshop{display:inline-block;padding:2px 7px;border-radius:8px;background:#eee8ff;color:#463096;font-size:15px}.note{background:#fff4e3;padding:8px;border-radius:10px;margin-top:8px;font-weight:800;font-size:13px}
 .panel{display:none}.panel.active{display:block}.bottom{position:fixed;left:0;right:0;bottom:0;background:#f7f7f4;border-top:1px solid #ddd;padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
 .navs{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.nav{min-height:55px;border:0;border-radius:14px;background:#fff;font-weight:1000}.nav.active{background:#1d1d1f;color:#fff}
 .form{background:#fff;border:1px solid #ddd;border-radius:17px;padding:14px;margin-top:12px}.form h2{margin:0 0 10px}.form label{display:block;font-size:13px;font-weight:900;margin:9px 0 4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.primary{width:100%;min-height:52px;margin-top:12px}.sourcebtn{padding:10px 12px;border:2px solid #ccc;background:#fff;border-radius:999px;font-weight:900;margin:3px}.sourcebtn.active{border-color:#1769e0;background:#eaf2ff}
@@ -219,13 +219,14 @@ function card(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
       del=prev&&Number(x.price)>0&&Number(prev.price)>0?x.price-prev.price:null,
       priced=D.filter(z=>z.p===x.p&&Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
-  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="spec">${specification(x)}</div></div>
+  const sourceIcon=S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬";
+  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="storename">${sourceIcon} ${x.source}</div><div class="spec">${specification(x)}</div></div>
   <div class="pricebox"><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
-  <div class="meta"><span class="tag">${S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬"}${x.source}</span><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
+  <div class="meta"><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
   <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}
   <div class="date">📅 登録日：${x.date||"不明"}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
-  ${lo?`<div class="low">🏆 過去最安：${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}　${lo.source}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
+  ${lo?`<div class="low">🏆 過去最安：<span class="historyshop">🏬 ${lo.source}</span><br>${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
   ${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`;
 }
 function renderProducts(q=""){
