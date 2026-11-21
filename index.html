@@ -11,20 +11,34 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 .f{background:#e5f7e9;color:#176035}.w{background:#fff3c7;color:#705300}.o{background:#ffe2e2;color:#8d2525}.p{background:#eee8ff;color:#5036a0}
 .search{display:grid;grid-template-columns:1fr 92px;gap:8px}.search input,.form input,.form select,.form textarea{width:100%;min-height:50px;border:1px solid #bbb;border-radius:13px;padding:10px 12px;background:#fff;font-size:16px}
 .search button,.primary{border:0;border-radius:13px;background:#1769e0;color:white;font-weight:1000}.guide{text-align:center;color:#777;font-weight:900;padding:30px 5px}
+.listhead{display:flex;justify-content:space-between;align-items:end;gap:10px;margin:18px 2px 8px}
+.listhead h2{margin:0;font-size:19px}.count{font-size:12px;color:#777;font-weight:900}
+.brandline{margin-top:7px;font-size:12px;font-weight:900;display:flex;flex-wrap:wrap;gap:5px}
+.brandtag{display:inline-block;padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#1854a6}
+.pbtag{background:#fff0d7;color:#8a4e00}.unknowntag{background:#eee;color:#666}
 .group{margin:18px 0}.group h2{font-size:19px}.card{background:#fff;border:1px solid #ddd;border-left:9px solid #ef6d4f;border-radius:17px;padding:13px;margin:9px 0}.best{outline:4px solid #49b768;background:#effaf2}
 .row{display:flex;justify-content:space-between;gap:10px}.price{text-align:right;font-size:42px;font-weight:1000;line-height:1}.best .price{font-size:54px}.unit{text-align:right;font-size:14px;font-weight:1000;margin-top:6px}
 .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.tag{padding:4px 7px;border-radius:999px;background:#eee;font-size:11px;font-weight:900}.date{font-size:12px;color:#666;margin-top:9px}.delta{font-weight:1000;margin-top:7px}.down{color:#188747}.up{color:#c63e3e}.low{font-weight:1000;color:#5c45ab;margin-top:5px}.note{background:#fff4e3;padding:8px;border-radius:10px;margin-top:8px;font-weight:800;font-size:13px}
 .panel{display:none}.panel.active{display:block}.bottom{position:fixed;left:0;right:0;bottom:0;background:#f7f7f4;border-top:1px solid #ddd;padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
 .navs{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.nav{min-height:55px;border:0;border-radius:14px;background:#fff;font-weight:1000}.nav.active{background:#1d1d1f;color:#fff}
 .form{background:#fff;border:1px solid #ddd;border-radius:17px;padding:14px;margin-top:12px}.form h2{margin:0 0 10px}.form label{display:block;font-size:13px;font-weight:900;margin:9px 0 4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.primary{width:100%;min-height:52px;margin-top:12px}.sourcebtn{padding:10px 12px;border:2px solid #ccc;background:#fff;border-radius:999px;font-weight:900;margin:3px}.sourcebtn.active{border-color:#1769e0;background:#eaf2ff}
+.syncbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #ddd;border-radius:16px;padding:10px 12px;margin:12px 0}.syncinfo{flex:1;min-width:210px}.syncinfo b{font-size:14px}.syncdetail{font-size:11px;color:#666;margin-top:3px}.syncbtn{border:0;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:1000;background:#1769e0;color:#fff}.syncbtn.secondary{background:#eee;color:#333}.synced{color:#188747}.syncerror{color:#c63e3e}
 </style></head><body><div class="app">
-<h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・価格を最優先表示</div>
+<h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・登録済み商品を一覧表示</div>
+<div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
 <div class="legend"><span class="f">🟢30日以内</span><span class="w">🟡31〜90日</span><span class="o">🔴91日〜</span><span class="p">🏆過去最安</span></div>
-<section id="products" class="panel active"><div class="search"><input id="q" placeholder="商品名　例：ガーリックトマト"><button id="go">検索</button></div><div id="results" class="guide">商品名を入力して「検索」をタップしてください。</div></section>
+<section id="products" class="panel active">
+<div class="search"><input id="q" placeholder="商品名　例：ガーリックトマト"><button id="go">検索</button></div>
+<div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
+<div id="results"></div>
+</section>
 <section id="sources" class="panel"><div id="sourceBtns"></div><div id="sourceResults"></div></section>
 <section id="favorites" class="panel"><div id="favResults"></div></section>
 <section id="add" class="panel">
-<div class="form"><h2>＋価格を登録</h2><label>商品名</label><input id="pn"><label>カテゴリー</label><select id="cat"><option>食品</option><option>洗剤・掃除</option><option>ヘア用品</option><option>日用品</option><option>その他</option></select>
+<div class="form"><h2>＋価格を登録</h2><label>商品名</label><input id="pn">
+<label>ブランド区分</label><select id="bt"><option value="maker">有名メーカー・一般メーカー品</option><option value="pb">販売元オリジナル・PB</option><option value="unknown" selected>不明・未確認</option></select>
+<label>ブランド／メーカー名</label><input id="bn" placeholder="例：トップバリュ、花王">
+<label>カテゴリー</label><select id="cat"><option>食品</option><option>洗剤・掃除</option><option>ヘア用品</option><option>日用品</option><option>その他</option></select>
 <div class="grid"><div><label>価格</label><input id="pr" type="number" inputmode="decimal"></div><div><label>登録日</label><input id="dt" type="date"></div></div>
 <div class="grid"><div><label>内容量</label><input id="am" type="number" inputmode="decimal"></div><div><label>単位</label><select id="un"><option>g</option><option>kg</option><option>ml</option><option>L</option><option>個</option><option>枚</option><option>m</option></select></div></div>
 <label>販売元</label><select id="so"></select><label>備考</label><textarea id="no"></textarea><button id="addPrice" class="primary">登録する</button></div>
@@ -32,7 +46,25 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 <div class="form"><h2>バックアップ</h2><button id="backup" class="primary">データを書き出す</button></div>
 </section></div>
 <div class="bottom"><div class="navs"><button class="nav active" data-p="products">🔎<br>商品</button><button class="nav" data-p="sources">🏬<br>販売元</button><button class="nav" data-p="favorites">⭐<br>いつもの</button><button class="nav" data-p="add">＋<br>登録</button></div></div>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDoC6wwwHaf3odd_6HQd1TRmod30UXeu6Y",
+  authDomain: "kazu-sokone.firebaseapp.com",
+  projectId: "kazu-sokone",
+  storageBucket: "kazu-sokone.firebasestorage.app",
+  messagingSenderId: "895643887036",
+  appId: "1:895643887036:web:51169fa456f3bb1cc7f7b9"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+auth.useDeviceLanguage();
+const db = getFirestore(firebaseApp);
+const provider = new GoogleAuthProvider();
+
 const seedS=[{name:"たいらや",type:"shop"},{name:"昭和食品",type:"shop"},{name:"D2",type:"shop"},{name:"コスモス",type:"shop"},{name:"カインズホーム",type:"shop"}];
 const seedD=[
 {id:1,p:"ガーリックトマト",price:150,date:"2025-04-11",source:"たいらや",amount:240,unit:"g",cat:"食品",fav:true},
@@ -42,20 +74,121 @@ const seedD=[
 {id:5,p:"栃木県産コシヒカリ",price:6264,date:"2026-07-15",source:"昭和食品",amount:10,unit:"kg",cat:"食品",fav:true},
 {id:6,p:"D2トイレットペーパー",price:690,date:"",source:"D2",amount:600,unit:"m",cat:"日用品",fav:true,note:"50m×12ロール／2個1,298円の記録あり"}
 ];
-const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}, put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-let S=get("kazuS",seedS),D=get("kazuD",seedD); const $=x=>document.getElementById(x),yen=n=>Number(n).toLocaleString("ja-JP");
+const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const putLocal=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let S=get("kazuS",seedS),D=get("kazuD",seedD);
+const $=x=>document.getElementById(x),yen=n=>Number(n).toLocaleString("ja-JP");
+let cloudRef=null,cloudReady=false,applyingCloud=false,unsubscribeCloud=null,currentUser=null;
+function setSync(title,detail="",kind=""){
+  $("syncTitle").textContent=title; $("syncTitle").className=kind;
+  $("syncDetail").textContent=detail;
+}
+function saveLocal(){putLocal("kazuS",S);putLocal("kazuD",D)}
+async function saveAll(){
+  saveLocal();
+  if(!cloudRef||!cloudReady||applyingCloud)return;
+  try{
+    setSync("☁️ 同期中…","クラウドへ保存しています。");
+    await setDoc(cloudRef,{sources:S,data:D,updatedAt:serverTimestamp()},{merge:true});
+    setSync("☁️ 同期済み","PC・iPhoneで同じデータを使用中。","synced");
+  }catch(e){
+    console.error(e); setSync("⚠️ 同期エラー","Firebaseのルールまたは通信状態を確認してください。","syncerror");
+  }
+}
+function renderAll(){fillSources();favs();renderProducts($("q")?.value||"")}
 function base(x){let a=+x.amount||0,u=x.unit;if(u==="kg")a*=1000;if(u==="L")a*=1000;let per=(u==="g"||u==="ml")?100:1;return {v:a?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}}
 function latest(){let m={};D.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(x=>m[x.p+"|"+x.source+"|"+x.amount+x.unit]=x);return Object.values(m)}
 function hist(x){return D.filter(z=>z.p===x.p&&z.source===x.source).sort((a,b)=>(a.date||"").localeCompare(b.date||""))}
-function card(x,best){let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,del=prev?x.price-prev.price:null,lo=D.filter(z=>z.p===x.p).reduce((a,b)=>a.price<=b.price?a:b),u=base(x);return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="meta"><span class="tag">${S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬"}${x.source}</span><span class="tag">${x.cat}</span></div></div><div><div class="price">${yen(x.price)}<small style="font-size:12px">円</small></div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div><div class="date">📅 登録日：${x.date||"不明"}</div>${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}<div class="low">🏆 過去最安：${yen(lo.price)}円　${lo.date||"日付不明"}　${lo.source}</div>${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`}
-function search(){let q=$("q").value.trim().toLowerCase();if(!q){$("results").innerHTML="商品名を入力してください。";return}let r=latest().filter(x=>x.p.toLowerCase().includes(q));let groups={};r.forEach(x=>(groups[x.p]??=[]).push(x));$("results").className="";$("results").innerHTML=Object.entries(groups).map(([n,a])=>{let vals=a.map(x=>({x,u:base(x).v})).filter(z=>z.u!=null),best=vals.length?vals.reduce((a,b)=>a.u<=b.u?a:b).x:null;return `<div class="group"><h2>${n}</h2>${a.sort((x,y)=>(base(x).v||1e9)-(base(y).v||1e9)).map(x=>card(x,best&&x.id===best.id)).join("")}</div>`}).join("")||'<div class="guide">該当する商品がありません。</div>'}
+function brandLabel(x){
+  let t=x.brandType||"unknown", n=(x.brandName||"").trim();
+  if(t==="pb") return `<span class="brandtag pbtag">🏷️ オリジナル・PB${n?"："+n:""}</span>`;
+  if(t==="maker") return `<span class="brandtag">🏭 メーカー品${n?"："+n:""}</span>`;
+  return `<span class="brandtag unknowntag">❓ ブランド区分 未確認${n?"："+n:""}</span>`;
+}
+function card(x,best){
+  let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,del=prev?x.price-prev.price:null,
+      lo=D.filter(z=>z.p===x.p).reduce((a,b)=>a.price<=b.price?a:b),u=base(x);
+  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b>
+  <div class="meta"><span class="tag">${S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬"}${x.source}</span><span class="tag">${x.cat}</span></div>
+  <div class="brandline">${brandLabel(x)}</div></div>
+  <div><div class="price">${yen(x.price)}<small style="font-size:12px">円</small></div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
+  <div class="date">📅 登録日：${x.date||"不明"}</div>
+  ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
+  <div class="low">🏆 過去最安：${yen(lo.price)}円　${lo.date||"日付不明"}　${lo.source}</div>
+  ${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`;
+}
+function renderProducts(q=""){
+  q=(q||"").trim().toLowerCase();
+  let all=latest(),r=q?all.filter(x=>x.p.toLowerCase().includes(q)):all,groups={};
+  r.forEach(x=>(groups[x.p]??=[]).push(x));
+  let names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ja"));
+  $("productCount").textContent=`${names.length}商品`;
+  if(!names.length){$("results").innerHTML='<div class="guide">該当する商品がありません。</div>';return}
+  $("results").innerHTML=names.map(n=>{
+    let a=groups[n],vals=a.map(x=>({x,u:base(x).v})).filter(z=>z.u!=null),
+        best=vals.length?vals.reduce((a,b)=>a.u<=b.u?a:b).x:null;
+    return `<div class="group"><h2>${n}</h2>${a.sort((x,y)=>(base(x).v||1e9)-(base(y).v||1e9)).map(x=>card(x,best&&x.id===best.id)).join("")}</div>`;
+  }).join("");
+}
+function search(){renderProducts($("q").value)}
 $("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();search()}});
 function fillSources(){$("so").innerHTML=S.map(s=>`<option>${s.name}</option>`).join("");$("sourceBtns").innerHTML=S.map(s=>`<button class="sourcebtn" data-s="${s.name}">${s.type==="person"?"👤":"🏬"}${s.name}</button>`).join("");document.querySelectorAll(".sourcebtn").forEach(b=>b.onclick=()=>{$("sourceResults").innerHTML=latest().filter(x=>x.source===b.dataset.s).map(x=>card(x,false)).join("")})}
 function favs(){$("favResults").innerHTML=latest().filter(x=>x.fav).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>'}
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n===b));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===b.dataset.p));if(b.dataset.p==="sources")fillSources();if(b.dataset.p==="favorites")favs()});
 let now=new Date();$("dt").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
-$("addPrice").onclick=()=>{if(!$("pn").value.trim()||!(+$("pr").value))return alert("商品名と価格を入力してください。");D.push({id:Date.now(),p:$("pn").value.trim(),price:+$("pr").value,date:$("dt").value,source:$("so").value,amount:+$("am").value,unit:$("un").value,cat:$("cat").value,note:$("no").value.trim(),fav:false});put("kazuD",D);alert("登録しました！");$("pn").value="";$("pr").value="";$("no").value=""}
-$("addSource").onclick=()=>{let n=$("sn").value.trim();if(!n)return;if(!S.some(s=>s.name===n)){S.push({name:n,type:$("st").value});put("kazuS",S);fillSources();alert("追加しました！")}}
+$("addPrice").onclick=async()=>{if(!$("pn").value.trim()||!(+$("pr").value))return alert("商品名と価格を入力してください。");D.push({id:Date.now(),p:$("pn").value.trim(),price:+$("pr").value,date:$("dt").value,source:$("so").value,amount:+$("am").value,unit:$("un").value,cat:$("cat").value,brandType:$("bt").value,brandName:$("bn").value.trim(),note:$("no").value.trim(),fav:false});await saveAll();renderProducts($("q").value);alert("登録しました！");$("pn").value="";$("pr").value="";$("bn").value="";$("no").value=""}
+$("addSource").onclick=async()=>{let n=$("sn").value.trim();if(!n)return;if(!S.some(s=>s.name===n)){S.push({name:n,type:$("st").value});await saveAll();fillSources();alert("追加しました！")}}
 $("backup").onclick=()=>{let a=document.createElement("a"),b=new Blob([JSON.stringify({sources:S,data:D},null,2)],{type:"application/json"});a.href=URL.createObjectURL(b);a.download="底値帳バックアップ.json";a.click()}
-fillSources();favs();
+
+$("loginBtn").onclick=async()=>{
+  try{await signInWithPopup(auth,provider)}catch(e){
+    console.error(e); alert("Googleログインに失敗しました。\n"+(e?.message||e));
+  }
+};
+$("logoutBtn").onclick=async()=>{await firebaseSignOut(auth)};
+
+onAuthStateChanged(auth,async user=>{
+  currentUser=user||null;
+  if(unsubscribeCloud){unsubscribeCloud();unsubscribeCloud=null}
+  cloudRef=null;cloudReady=false;
+  if(!user){
+    $("loginBtn").hidden=false;$("logoutBtn").hidden=true;
+    setSync("☁️ 同期：未接続","Googleログインすると、PCとiPhoneで同じ底値データを使えます。");
+    return;
+  }
+  $("loginBtn").hidden=true;$("logoutBtn").hidden=false;
+  setSync("☁️ 接続中…","クラウドの底値データを確認しています。");
+  cloudRef=doc(db,"users",user.uid,"app","state");
+  try{
+    const snap=await getDoc(cloudRef);
+    if(snap.exists()){
+      // 既存クラウドと、この端末だけに残っている記録を合流してから同期する
+      const v=snap.data();
+      const cloudS=Array.isArray(v.sources)?v.sources:[];
+      const cloudD=Array.isArray(v.data)?v.data:[];
+      const sm=new Map(); [...S,...cloudS].forEach(x=>sm.set(x.name,x));
+      const dm=new Map(); [...D,...cloudD].forEach(x=>dm.set(String(x.id),x));
+      S=[...sm.values()]; D=[...dm.values()];
+      applyingCloud=true; saveLocal();renderAll(); applyingCloud=false;
+      await setDoc(cloudRef,{sources:S,data:D,updatedAt:serverTimestamp()},{merge:true});
+    }else{
+      // クラウドが空なら、この端末にある既存データを最初のデータとして移行する
+      await setDoc(cloudRef,{sources:S,data:D,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    }
+    cloudReady=true;
+    setSync("☁️ 同期済み","PC・iPhoneで同じデータを使用中。","synced");
+    unsubscribeCloud=onSnapshot(cloudRef,s=>{
+      if(!s.exists())return;
+      const v=s.data(); applyingCloud=true;
+      if(Array.isArray(v.sources))S=v.sources;
+      if(Array.isArray(v.data))D=v.data;
+      saveLocal();renderAll();applyingCloud=false;
+      setSync("☁️ 同期済み","最新データを受信しました。","synced");
+    },e=>{console.error(e);setSync("⚠️ 同期エラー","Firestoreのルールを確認してください。","syncerror")});
+  }catch(e){
+    console.error(e);setSync("⚠️ 接続エラー","Firestoreのルールを確認してください。","syncerror");
+  }
+});
+
+fillSources();favs();renderProducts();
 </script></body></html>
