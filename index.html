@@ -24,7 +24,10 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 .navs{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.nav{min-height:55px;border:0;border-radius:14px;background:#fff;font-weight:1000}.nav.active{background:#1d1d1f;color:#fff}
 .form{background:#fff;border:1px solid #ddd;border-radius:17px;padding:14px;margin-top:12px}.form h2{margin:0 0 10px}.form label{display:block;font-size:13px;font-weight:900;margin:9px 0 4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.primary{width:100%;min-height:52px;margin-top:12px}.sourcebtn{padding:10px 12px;border:2px solid #ccc;background:#fff;border-radius:999px;font-weight:900;margin:3px}.sourcebtn.active{border-color:#1769e0;background:#eaf2ff}
 .syncbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #ddd;border-radius:16px;padding:10px 12px;margin:12px 0}.syncinfo{flex:1;min-width:210px}.syncinfo b{font-size:14px}.syncdetail{font-size:11px;color:#666;margin-top:3px}.syncbtn{border:0;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:1000;background:#1769e0;color:#fff}.syncbtn.secondary{background:#eee;color:#333}.synced{color:#188747}.syncerror{color:#c63e3e}
+.cardactions{display:flex;gap:7px;margin-top:10px}.cardaction{border:0;border-radius:10px;padding:8px 12px;background:#eaf2ff;color:#174f98;font-size:13px;font-weight:1000}.cardaction.history{background:#eee8ff;color:#4c3791}
+dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius:18px;padding:0;box-shadow:0 20px 70px #0005}dialog::backdrop{background:#0008}.modalbody{padding:18px;overflow:auto;max-height:90vh}.modalhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.modalhead h2{margin:0;font-size:21px}.closebtn{border:0;border-radius:10px;background:#eee;padding:8px 12px;font-weight:1000}.editgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editfield{margin-top:10px}.editfield.full{grid-column:1/-1}.editfield label,.modebox legend{display:block;margin-bottom:4px;font-size:13px;font-weight:1000}.editfield input,.editfield select,.editfield textarea{width:100%;min-height:44px;border:1px solid #bbb;border-radius:10px;padding:8px 10px;background:#fff;font-size:16px}.editfield textarea{min-height:76px;resize:vertical}.modebox{grid-column:1/-1;margin-top:12px;border:2px solid #f1b24b;border-radius:12px;padding:10px;background:#fff8e8}.modebox label{display:block;padding:5px 0;font-weight:900}.editbuttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}.saveedit,.deleteedit{min-height:48px;border:0;border-radius:12px;font-weight:1000}.saveedit{background:#1769e0;color:#fff}.deleteedit{background:#ffe1e1;color:#962c2c}.historylist{display:grid;gap:8px}.historyrow{border:1px solid #ddd;border-radius:13px;padding:10px;background:#fff}.historyrowtop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.historyinfo{font-weight:900;line-height:1.55}.historyedit{border:0;border-radius:9px;padding:8px 11px;background:#eaf2ff;color:#174f98;font-weight:1000}
 @media(max-width:480px){.row{display:block}.pricebox{min-width:0;margin-top:10px}.price,.unit{text-align:left}.best .price{font-size:46px}}
+@media(max-width:520px){.editgrid{grid-template-columns:1fr}.editfield.full,.modebox{grid-column:1}.editbuttons{grid-template-columns:1fr}}
 </style></head><body><div class="app">
 <h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・登録済み商品を一覧表示</div>
 <div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
@@ -51,6 +54,26 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 <div class="form"><h2>＋販売元を追加</h2><label>名前</label><input id="sn" placeholder="例：田中さん"><label>種類</label><select id="st"><option value="shop">🏬お店</option><option value="person">👤人</option></select><button id="addSource" class="primary">追加する</button></div>
 <div class="form"><h2>バックアップ</h2><button id="backup" class="primary">データを書き出す</button></div>
 </section></div>
+<dialog id="editDialog"><div class="modalbody"><div class="modalhead"><h2>価格記録を編集</h2><button id="closeEdit" class="closebtn" type="button">閉じる</button></div>
+<form id="editForm"><div class="editgrid">
+<div class="editfield"><label for="editDisplayName">表示名・俗称</label><input id="editDisplayName" required></div>
+<div class="editfield"><label for="editFormalName">正式商品名</label><input id="editFormalName"></div>
+<div class="editfield"><label for="editSource">店舗名</label><select id="editSource" required></select></div>
+<div class="editfield"><label for="editPrice">価格（円）</label><input id="editPrice" type="number" min="0" step="0.01" inputmode="decimal"></div>
+<div class="editfield"><label for="editContentAmount">1単位の容量・数量</label><input id="editContentAmount" type="number" min="0" step="0.001" inputmode="decimal"></div>
+<div class="editfield"><label for="editContentUnit">単位</label><select id="editContentUnit"><option value="">未確認</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>個</option><option>枚</option><option>本</option><option>袋</option><option>m</option></select></div>
+<div class="editfield"><label for="editPurchaseCount">セット内の個数・本数・袋数</label><input id="editPurchaseCount" type="number" min="1" step="1" inputmode="numeric"></div>
+<div class="editfield"><label for="editPurchaseUnit">セット数の単位</label><select id="editPurchaseUnit"><option value="点">点</option><option value="個">個</option><option value="本">本</option><option value="袋">袋</option><option value="パック">パック</option><option value="箱">箱</option><option value="ロール">ロール</option></select></div>
+<div class="editfield"><label for="editDate">日付</label><input id="editDate" type="date"></div>
+<div class="editfield"><label for="editMetersPerRoll">1ロールの長さ（m）</label><input id="editMetersPerRoll" type="number" min="0" step="0.01" inputmode="decimal"></div>
+<div class="editfield"><label for="editRollCount">ロール数</label><input id="editRollCount" type="number" min="0" step="1" inputmode="numeric"></div>
+<div class="editfield"><label for="editMajor">大ジャンル</label><input id="editMajor"></div>
+<div class="editfield"><label for="editMinor">小ジャンル</label><input id="editMinor"></div>
+<div class="editfield full"><label for="editSearchWords">検索ワード</label><input id="editSearchWords"></div>
+<div class="editfield full"><label for="editNote">備考</label><textarea id="editNote"></textarea></div>
+<fieldset class="modebox"><legend>価格記録の保存方法</legend><label><input type="radio" name="priceSaveMode" value="replace" checked> この価格記録を修正する</label><label><input type="radio" name="priceSaveMode" value="add"> 新しい価格履歴として追加する</label></fieldset>
+</div><div class="editbuttons"><button id="saveEdit" class="saveedit" type="submit">保存して同期</button><button id="deleteEdit" class="deleteedit" type="button">この価格記録を削除</button></div></form></div></dialog>
+<dialog id="historyDialog"><div class="modalbody"><div class="modalhead"><h2 id="historyTitle">価格履歴</h2><button id="closeHistory" class="closebtn" type="button">閉じる</button></div><div id="historyList" class="historylist"></div></div></dialog>
 <div class="bottom"><div class="navs"><button class="nav active" data-p="products">🔎<br>商品</button><button class="nav" data-p="sources">🏬<br>販売元</button><button class="nav" data-p="favorites">⭐<br>いつもの</button><button class="nav" data-p="add">＋<br>登録</button></div></div>
 <script src="migration-data.js"></script>
 <script type="module">
@@ -146,13 +169,15 @@ function setSync(title,detail="",kind=""){
 function saveLocal(){putLocal("kazuS",S);putLocal("kazuD",D);putLocal("kazuMigrations",M)}
 async function saveAll(){
   saveLocal();
-  if(!cloudRef||!cloudReady||applyingCloud)return;
+  if(!cloudRef||!cloudReady||applyingCloud)return "local";
   try{
     setSync("☁️ 同期中…","クラウドへ保存しています。");
     await setDoc(cloudRef,{sources:S,data:D,migrations:M,updatedAt:serverTimestamp()},{merge:true});
     setSync("☁️ 同期済み","PC・iPhoneで同じデータを使用中。","synced");
+    return "cloud";
   }catch(e){
     console.error(e); setSync("⚠️ 同期エラー","Firebaseのルールまたは通信状態を確認してください。","syncerror");
+    return false;
   }
 }
 function renderAll(){fillSources();favs();renderProducts($("q")?.value||"")}
@@ -186,7 +211,7 @@ function specification(x){
   const memo=String(x.originalMemo||"");
   const note=String(x.note||"");
   let parts=[],main="";
-  const rollMatch=memo.match(/(\d+(?:\.\d+)?)\s*m\s*[×xX]\s*(\d+)/i);
+  const rollMatch=x.specEdited?null:memo.match(/(\d+(?:\.\d+)?)\s*m\s*[×xX]\s*(\d+)/i);
   if(rollMatch){
     main=`${amountText(rollMatch[1])}m×${amountText(rollMatch[2])}ロール`;
     const tail=memo.slice((rollMatch.index||0)+rollMatch[0].length),packMatch=tail.match(/(\d+)\s*(個|パック)/);
@@ -197,8 +222,8 @@ function specification(x){
     const contentUnit=x.contentUnit||x.unit||"";
     main=`${amountText(x.contentAmount)}${contentUnit}`;
     if(Number(x.purchaseCount)>1){
-      const countMatch=memo.match(new RegExp(`${amountText(x.purchaseCount)}\\s*(個|本|袋|パック|箱)`));
-      main+=`×${amountText(x.purchaseCount)}${countMatch?countMatch[1]:"点"}`;
+      const countMatch=x.specEdited?null:memo.match(new RegExp(`${amountText(x.purchaseCount)}\\s*(個|本|袋|パック|箱)`));
+      main+=`×${amountText(x.purchaseCount)}${x.purchaseUnit||(countMatch?countMatch[1]:"点")}`;
     }
   }else if(Number(x.amount)>0&&x.unit){
     main=`${amountText(x.amount)}${x.unit}`;
@@ -206,8 +231,9 @@ function specification(x){
     main="容量未確認";
   }
   if(x.p==="ゴミ袋"){
-    const capacity=(memo+" "+note).match(/(?:^|\s)(\d+(?:\.\d+)?)\s*L(?:\s|・|$)/i);
-    const thickness=(memo+" "+note).match(/(?:厚み)?\s*(\d+(?:\.\d+)?)\s*mm/i);
+    const specificationMemo=(x.specEdited?"":memo)+" "+note;
+    const capacity=specificationMemo.match(/(?:^|\s)(\d+(?:\.\d+)?)\s*L(?:\s|・|$)/i);
+    const thickness=specificationMemo.match(/(?:厚み)?\s*(\d+(?:\.\d+)?)\s*mm/i);
     if(capacity&&!main.includes(`${capacity[1]}L`))parts.push(`${amountText(capacity[1])}L`);
     if(thickness)parts.push(`厚み${amountText(thickness[1])}mm`);
   }
@@ -227,7 +253,56 @@ function card(x,best){
   <div class="date">📅 登録日：${x.date||"不明"}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
   ${lo?`<div class="low">🏆 過去最安：<span class="historyshop">🏬 ${lo.source}</span><br>${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
-  ${x.note?`<div class="note">📝 ${x.note}</div>`:""}</div>`;
+  ${x.note?`<div class="note">📝 ${x.note}</div>`:""}
+  <div class="cardactions"><button class="cardaction" type="button" data-edit-id="${x.id}">✏️ 編集</button><button class="cardaction history" type="button" data-history-id="${x.id}">🕘 価格履歴</button></div></div>`;
+}
+let editingId=null;
+function optionText(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function sourceOptions(selected){
+  $("editSource").innerHTML=S.map(s=>`<option value="${optionText(s.name)}"${s.name===selected?' selected':''}>${optionText(s.name)}</option>`).join("");
+}
+function newRecordId(){return "user-"+(globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`)}
+function recalcEditedItem(item){
+  const content=Number(item.contentAmount),count=Math.max(1,Number(item.purchaseCount)||1),meters=Number(item.metersPerRoll),rolls=Number(item.rollCount);
+  if(meters>0&&rolls>0){
+    item.amount=meters*rolls;item.unit="m";item.normalizedAmount=item.amount;item.comparisonUnit="1m";
+    item.contentAmount=null;item.contentUnit="";item.purchaseCount=1;item.purchaseUnit="ロール";
+  }else if(content>0&&item.contentUnit){
+    item.purchaseCount=count;item.amount=content*count;item.unit=item.contentUnit;
+    if(item.unit==="kg"){item.normalizedAmount=item.amount*1000;item.comparisonUnit="100g"}
+    else if(item.unit==="L"){item.normalizedAmount=item.amount*1000;item.comparisonUnit="100ml"}
+    else{item.normalizedAmount=item.amount;item.comparisonUnit=item.unit==="g"?"100g":item.unit==="ml"?"100ml":`1${item.unit}`}
+    item.metersPerRoll=null;item.rollCount=null;
+  }else{
+    item.amount=null;item.unit=item.contentUnit||"";item.normalizedAmount=null;item.comparisonUnit="";
+    item.metersPerRoll=null;item.rollCount=null;
+  }
+  const unit=base(item);item.unitPrice=unit.v;item.unitPriceLabel=unit.v?`${unit.v.toFixed(2)}${unit.l}`:"";
+  return item;
+}
+function openEditor(id){
+  const item=D.find(x=>String(x.id)===String(id));if(!item)return;
+  editingId=item.id;sourceOptions(item.source);
+  $("editDisplayName").value=item.displayName||item.p||"";$("editFormalName").value=item.formalName||"";
+  $("editPrice").value=Number(item.price)>0?item.price:"";$("editContentAmount").value=item.contentAmount??(item.metersPerRoll?"":item.amount??"");
+  $("editContentUnit").value=item.contentUnit||(item.metersPerRoll?"":item.unit)||"";$("editPurchaseCount").value=item.purchaseCount||1;
+  $("editPurchaseUnit").value=item.purchaseUnit||"点";$("editDate").value=item.date||"";
+  $("editMetersPerRoll").value=item.metersPerRoll??"";$("editRollCount").value=item.rollCount??"";
+  $("editMajor").value=item.majorCategory||item.cat||"";$("editMinor").value=item.minorCategory||"";
+  $("editSearchWords").value=item.searchWords||"";$("editNote").value=item.note||"";
+  document.querySelector('input[name="priceSaveMode"][value="replace"]').checked=true;
+  $("editDialog").showModal();
+}
+function renderHistory(productName){
+  const rows=D.filter(x=>x.p===productName).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  $("historyTitle").textContent=`${productName}｜価格履歴`;
+  $("historyList").innerHTML=rows.map(x=>`<div class="historyrow"><div class="historyrowtop"><div class="historyinfo">🏬 ${optionText(x.source)}<br>${specification(x)}<br>${Number(x.price)>0?yen(x.price)+"円":"価格未確認"}　📅 ${x.date||"日付不明"}</div><button class="historyedit" type="button" data-edit-id="${x.id}">編集</button></div></div>`).join("")||'<div class="guide">価格履歴がありません。</div>';
+  bindCardActions($("historyList"));
+}
+function openHistory(id){const item=D.find(x=>String(x.id)===String(id));if(!item)return;renderHistory(item.p);$("historyDialog").showModal()}
+function bindCardActions(root=document){
+  root.querySelectorAll("[data-edit-id]").forEach(b=>b.onclick=()=>{if($("historyDialog").open)$("historyDialog").close();openEditor(b.dataset.editId)});
+  root.querySelectorAll("[data-history-id]").forEach(b=>b.onclick=()=>openHistory(b.dataset.historyId));
 }
 function renderProducts(q=""){
   const normalizeSearch=v=>String(v??"").normalize("NFKC").toLowerCase().replace(/[、,／/|]+/g," ").replace(/\s+/g," ").trim();
@@ -243,11 +318,12 @@ function renderProducts(q=""){
         best=vals.length?vals.reduce((a,b)=>a.u<=b.u?a:b).x:null;
     return `<div class="group"><h2>${n}</h2>${a.sort((x,y)=>(base(x).v||1e9)-(base(y).v||1e9)).map(x=>card(x,best&&x.id===best.id)).join("")}</div>`;
   }).join("");
+  bindCardActions($("results"));
 }
 function search(){renderProducts($("q").value)}
 $("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();search()}});
-function fillSources(){$("so").innerHTML=S.map(s=>`<option>${s.name}</option>`).join("");$("sourceBtns").innerHTML=S.map(s=>`<button class="sourcebtn" data-s="${s.name}">${s.type==="person"?"👤":"🏬"}${s.name}</button>`).join("");document.querySelectorAll(".sourcebtn").forEach(b=>b.onclick=()=>{$("sourceResults").innerHTML=latest().filter(x=>x.source===b.dataset.s).map(x=>card(x,false)).join("")})}
-function favs(){$("favResults").innerHTML=latest().filter(x=>x.fav).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>'}
+function fillSources(){$("so").innerHTML=S.map(s=>`<option>${s.name}</option>`).join("");$("sourceBtns").innerHTML=S.map(s=>`<button class="sourcebtn" data-s="${s.name}">${s.type==="person"?"👤":"🏬"}${s.name}</button>`).join("");document.querySelectorAll(".sourcebtn").forEach(b=>b.onclick=()=>{$("sourceResults").innerHTML=latest().filter(x=>x.source===b.dataset.s).map(x=>card(x,false)).join("");bindCardActions($("sourceResults"))})}
+function favs(){$("favResults").innerHTML=latest().filter(x=>x.fav).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>';bindCardActions($("favResults"))}
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n===b));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===b.dataset.p));if(b.dataset.p==="sources")fillSources();if(b.dataset.p==="favorites")favs()});
 let now=new Date();$("dt").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
 $("addPrice").onclick=async()=>{
@@ -269,6 +345,44 @@ $("addPrice").onclick=async()=>{
 }
 $("addSource").onclick=async()=>{let n=$("sn").value.trim();if(!n)return;if(!S.some(s=>s.name===n)){S.push({name:n,type:$("st").value});await saveAll();fillSources();alert("追加しました！")}}
 $("backup").onclick=()=>{let a=document.createElement("a"),b=new Blob([JSON.stringify({sources:S,data:D},null,2)],{type:"application/json"});a.href=URL.createObjectURL(b);a.download="底値帳バックアップ.json";a.click()}
+
+$("closeEdit").onclick=()=>$("editDialog").close();
+$("closeHistory").onclick=()=>$("historyDialog").close();
+$("editForm").onsubmit=async e=>{
+  e.preventDefault();const current=D.find(x=>String(x.id)===String(editingId));if(!current)return;
+  const name=$("editDisplayName").value.trim(),source=$("editSource").value;
+  if(!name||!source)return alert("表示名・俗称と店舗名を入力してください。");
+  const mode=document.querySelector('input[name="priceSaveMode"]:checked')?.value||"replace";
+  const before=D.map(x=>({...x}));
+  const item={...current,
+    p:name,displayName:name,formalName:$("editFormalName").value.trim(),source,
+    price:$("editPrice").value===""?null:Number($("editPrice").value),date:$("editDate").value,
+    contentAmount:$("editContentAmount").value===""?null:Number($("editContentAmount").value),contentUnit:$("editContentUnit").value,
+    purchaseCount:Math.max(1,Number($("editPurchaseCount").value)||1),purchaseUnit:$("editPurchaseUnit").value,
+    metersPerRoll:$("editMetersPerRoll").value===""?null:Number($("editMetersPerRoll").value),rollCount:$("editRollCount").value===""?null:Number($("editRollCount").value),
+    cat:$("editMajor").value.trim()||"その他",majorCategory:$("editMajor").value.trim()||"その他",minorCategory:$("editMinor").value.trim(),
+    searchWords:$("editSearchWords").value.trim(),note:$("editNote").value.trim(),specEdited:true,verificationStatus:"ユーザー編集"
+  };
+  if(mode==="add"){item.id=newRecordId();item.recordId="";item.originalMemo="";D.push(recalcEditedItem(normalizeItem(item)))}
+  else{const index=D.findIndex(x=>String(x.id)===String(editingId));D[index]=recalcEditedItem(normalizeItem(item))}
+  const button=$("saveEdit");button.disabled=true;button.textContent="保存中…";
+  try{
+    const saved=await saveAll();
+    if(saved===false){D=before;saveLocal();return alert("Firebase同期に失敗したため、変更を取り消しました。通信状態を確認して、もう一度保存してください。")}
+    $("editDialog").close();renderAll();
+    const message=mode==="add"?"新しい価格履歴として保存しました。":"価格記録を修正しました。";
+    alert(saved==="cloud"?message:`${message}\n現在は同期未接続のため、この端末だけに保存されています。`);
+  }
+  finally{button.disabled=false;button.textContent="保存して同期"}
+};
+$("deleteEdit").onclick=async()=>{
+  const item=D.find(x=>String(x.id)===String(editingId));if(!item)return;
+  const price=Number(item.price)>0?`${yen(item.price)}円`:"価格未確認";
+  if(!confirm(`「${item.p}／${item.source}／${price}」の価格記録を削除しますか？\nこの操作は元に戻せません。`))return;
+  const before=D;D=D.filter(x=>String(x.id)!==String(editingId));const saved=await saveAll();
+  if(saved===false){D=before;saveLocal();return alert("Firebase同期に失敗したため、削除を取り消しました。通信状態を確認してください。")}
+  $("editDialog").close();renderAll();alert(saved==="cloud"?"価格記録を削除しました。":"価格記録をこの端末から削除しました。現在は同期未接続です。");
+};
 
 $("loginBtn").onclick=async()=>{
   try{await signInWithPopup(auth,provider)}catch(e){
