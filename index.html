@@ -76,6 +76,7 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 </section></div>
 <dialog id="editDialog"><div class="modalbody"><div class="modalhead"><h2>価格記録を編集</h2><button id="closeEdit" class="closebtn" type="button">閉じる</button></div>
 <form id="editForm"><div class="editgrid">
+<div class="editfield full" id="imageEditor"><label for="productImageFile">商品画像（同じ商品の店舗・価格履歴で共有）</label><div id="productImagePreview" style="height:120px;display:flex;align-items:center;justify-content:center;background:#f1f3f5">画像なし</div><input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"><div id="productImageStatus" role="status"></div><div class="cardactions"><button type="button" class="cardaction" id="saveProductImage">画像を保存して同期</button><button type="button" class="cardaction" id="removeProductImage">画像を削除</button></div><small>画像は価格記録とは別に保存します。長辺512px・100KB以下へ自動圧縮。元画像は送信しません。</small></div>
 <div class="editfield"><label for="editDisplayName">表示名・俗称</label><input id="editDisplayName" required></div>
 <div class="editfield"><label for="editFormalName">正式商品名</label><input id="editFormalName"></div>
 <div class="editfield"><label for="editSource">店舗名</label><select id="editSource" required></select></div>
@@ -100,7 +101,7 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, serverTimestamp, writeBatch, query, limit } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDoC6wwvHaf3odd_6HQd1TRmod30UXeu6Y",
@@ -305,7 +306,7 @@ function card(x,best){
   const u=base(x),esc=optionText;
   // Only a dedicated thumbnail is used; never fetch a full-size photo for a list.
   const thumbnail=typeof x.thumbnailUrl==="string"&&/^https:\/\//.test(x.thumbnailUrl)?x.thumbnailUrl:"";
-  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}の詳細"><span class="thumb"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactstore">${esc(x.source||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">詳細・価格履歴を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}を編集">✏️ 編集</button></div>`;
+  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactstore">${esc(x.source||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">詳細・価格履歴を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}を編集">✏️ 編集</button></div>`;
 }
 function detailCard(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
@@ -358,6 +359,7 @@ function openEditor(id){
   $("editSearchWords").value=item.searchWords||"";$("editNote").value=item.note||"";
   document.querySelector('input[name="priceSaveMode"][value="replace"]').checked=true;
   $("editDialog").showModal();
+  openImageEditor(item);
 }
 function renderHistory(productName){
   const rows=D.filter(x=>x.p===productName).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
@@ -367,6 +369,7 @@ function renderHistory(productName){
 }
 function openHistory(id){const item=D.find(x=>String(x.id)===String(id));if(!item)return;renderHistory(item.p);$("historyDialog").showModal()}
 function bindCardActions(root=document){
+  observeProductImages(root);
   root.querySelectorAll(".thumb img").forEach(img=>{img.onerror=()=>img.remove()});
   root.querySelectorAll("[data-detail-id]").forEach(b=>b.onclick=()=>{const item=D.find(x=>String(x.id)===b.dataset.detailId);if(!item)return;$("detailContent").innerHTML=detailCard(item,false);bindCardActions($("detailContent"));$("detailDialog").showModal()});
   root.querySelectorAll("[data-edit-id]").forEach(b=>b.onclick=()=>{if($("detailDialog").open)$("detailDialog").close();if($("historyDialog").open)$("historyDialog").close();openEditor(b.dataset.editId)});
@@ -448,6 +451,7 @@ $("closeEdit").onclick=()=>$("editDialog").close();
 $("closeHistory").onclick=()=>$("historyDialog").close();
 $("editForm").onsubmit=async e=>{
   e.preventDefault();const current=D.find(x=>String(x.id)===String(editingId));if(!current)return;
+  if(imageBusy||imagePending){alert('画像の保存がまだ完了していません。「画像を保存して同期」を先に押してください。');return}
   const name=$("editDisplayName").value.trim(),source=$("editSource").value;
   if(!name||!source)return alert("表示名・俗称と店舗名を入力してください。");
   const mode=document.querySelector('input[name="priceSaveMode"]:checked')?.value||"replace";
@@ -456,6 +460,7 @@ $("editForm").onsubmit=async e=>{
     return String(current[key]??"")!==String(values[key]??"");
   });
   const item={...current,
+    imageProductId:imageProductId(current),
     p:name,displayName:name,formalName:$("editFormalName").value.trim(),source,
     price:$("editPrice").value===""?null:Number($("editPrice").value),date:$("editDate").value,
     contentAmount:$("editContentAmount").value===""?null:Number($("editContentAmount").value),contentUnit:$("editContentUnit").value,
@@ -492,6 +497,7 @@ $("loginBtn").onclick=async()=>{
 $("logoutBtn").onclick=async()=>{await firebaseSignOut(auth)};
 
 onAuthStateChanged(auth,async user=>{
+  resetProductImages(user);
   currentUser=user||null;
   if(unsubscribeCloud){unsubscribeCloud();unsubscribeCloud=null}
   if(unsubscribeRecords){unsubscribeRecords();unsubscribeRecords=null}
@@ -549,5 +555,118 @@ onAuthStateChanged(auth,async user=>{
   }
 });
 
+// Thumbnail payloads are never included in price records or the app/state document.
+const IMAGE_MAX_BYTES=100*1024,IMAGE_MAX_COUNT=500;
+let imageUser=null,imageHeads=new Map(),imageReady=false,imageUnsubscribe=null,imageEpoch=0;
+let imageCache=new Map(),imageFlights=new Map(),imageEditorKey=null,imagePending=null,imageBusy=false,imageSelection=0;
+function imageProductId(item){return item.imageProductId||'name-'+encodeURIComponent(item.p||item.displayName||'')}
+const imageObserver=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){imageObserver.unobserve(e.target);paintProductImage(e.target)}}),{rootMargin:'120px'});
+function observeProductImages(root=document){root.querySelectorAll('[data-image-product]').forEach(el=>imageObserver.observe(el))}
+function imageError(e){return e?.code==='permission-denied'?'画像のアクセス権限を確認できません。':e?.code==='resource-exhausted'?'Firestoreの無料枠に達しました。画像操作を停止してください。':e?.message||'画像を取得・保存できません。通信状態を確認してください。'}
+let imageDBPromise;
+function imageDB(){return imageDBPromise??=new Promise((resolve,reject)=>{const r=indexedDB.open('kazu-thumbnails-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function imageDisk(method,key,value){try{const db=await imageDB();return await new Promise((resolve,reject)=>{const tx=db.transaction('images',method==='get'?'readonly':'readwrite'),store=tx.objectStore('images');const r=method==='get'?store.get(key):store.put(value,key);tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(tx.error)})}catch{return null}}
+function validImage(v){return v&&/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(v.dataUrl)&&v.dataUrl.length<=Math.ceil(IMAGE_MAX_BYTES/3)*4+40&&v.width>0&&v.height>0&&v.width<=512&&v.height<=512}
+async function getProductImage(key){
+  const uid=imageUser,epoch=imageEpoch,head=imageHeads.get(key);
+  if(!uid||!head||head.deleted)return null;
+  const cacheKey=uid+'/'+key,revision=head.revision;
+  const cached=imageCache.get(cacheKey);if(cached?.revision===revision)return cached;
+  const flightKey=cacheKey+'/'+revision;if(imageFlights.has(flightKey))return imageFlights.get(flightKey);
+  const job=(async()=>{
+    const disk=await imageDisk('get',cacheKey);
+    if(disk?.revision===revision&&validImage(disk)){if(epoch===imageEpoch)imageCache.set(cacheKey,disk);return disk}
+    if(epoch!==imageEpoch)return null;
+    const snap=await getDoc(doc(db,'users',uid,'productImages',key));
+    const value=snap.exists()?snap.data():null;
+    if(epoch!==imageEpoch||!value||value.deleted)return null;
+    if(!validImage(value))throw Error('画像データの形式またはサイズが不正です。');
+    if(value.revision!==imageHeads.get(key)?.revision)return null;
+    imageCache.set(cacheKey,value);await imageDisk('put',cacheKey,value);return value;
+  })();imageFlights.set(flightKey,job);try{return await job}finally{imageFlights.delete(flightKey)}
+}
+async function paintProductImage(el){
+  const key=el.dataset.imageProduct,epoch=imageEpoch,revision=imageHeads.get(key)?.revision,selection=imageSelection;
+  if(!key)return;
+  if(!imageUser||!imageHeads.has(key)||imageHeads.get(key).deleted){el.textContent='画像なし';return}
+  try{const value=await getProductImage(key);if(!el.isConnected||epoch!==imageEpoch||revision!==imageHeads.get(key)?.revision||(el.id==='productImagePreview'&&(selection!==imageSelection||imagePending||imageBusy)))return;
+    if(!value){el.textContent='画像なし';return}
+    const img=document.createElement('img');img.src=value.dataUrl;img.alt='商品画像';img.loading='lazy';img.decoding='async';img.style.cssText='width:100%;height:100%;object-fit:contain';el.replaceChildren(img);
+  }catch(e){if(epoch===imageEpoch){el.textContent='画像読込失敗';el.title=imageError(e)}}
+}
+function resetProductImages(user){
+  imageEpoch++;imageUser=user?.uid||null;imageReady=false;imageHeads.clear();imageCache.clear();imageFlights.clear();imageObserver.disconnect();imageSelection++;imagePending=null;
+  if(imageUnsubscribe)imageUnsubscribe();imageUnsubscribe=null;
+  document.querySelectorAll('[data-image-product]').forEach(el=>el.textContent='画像なし');
+  if(!imageUser){$('productImageStatus').textContent='画像操作にはGoogleログインが必要です。';return}
+  const epoch=imageEpoch;
+  imageUnsubscribe=onSnapshot(query(collection(db,'users',imageUser,'productImageHeads'),limit(IMAGE_MAX_COUNT+1)),{includeMetadataChanges:true},snap=>{
+    if(epoch!==imageEpoch)return;
+    imageReady=!snap.metadata.fromCache;imageHeads=new Map(snap.docs.map(d=>[d.id,d.data()]));
+    observeProductImages();
+    if($('editDialog').open&&!imagePending)paintProductImage($('productImagePreview'));
+  },e=>{imageReady=false;$('productImageStatus').textContent=imageError(e)});
+}
+function openImageEditor(item){
+  imageEditorKey=imageProductId(item);imageSelection++;imagePending=null;$('productImageFile').value='';
+  $('productImagePreview').dataset.imageProduct=imageEditorKey;
+  $('productImageStatus').textContent=imageUser?'画像は全店舗で共通です。画像専用ボタンで保存してください。':'画像操作にはGoogleログインが必要です。';
+  paintProductImage($('productImagePreview'));
+  $('restoreProductImage').disabled=!imageHeads.get(imageEditorKey)?.deleted;
+}
+async function compressProductImage(file){
+  if(file.size>25*1024*1024)throw Error('元画像は25MB以下を選んでください。');
+  if(!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type))throw Error('JPEG・PNG・WebP、または端末で表示できるHEICを選んでください。');
+  const url=URL.createObjectURL(file),img=new Image();
+  try{img.src=url;await img.decode();if(img.naturalWidth*img.naturalHeight>50000000)throw Error('画像が大きすぎます。50メガピクセル以下を選んでください。');
+    const scale=Math.min(1,512/Math.max(img.naturalWidth,img.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    for(const quality of [.82,.7,.58,.46,.34]){const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));if(blob&&blob.size<=IMAGE_MAX_BYTES){const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob)});return {dataUrl,width:canvas.width,height:canvas.height,bytes:blob.size,mime:'image/jpeg'}}}
+    throw Error('100KB以下に圧縮できませんでした。別の画像を選んでください。');
+  }catch(e){if(e.name==='EncodingError')throw Error('このブラウザでは画像を開けません。JPEG・PNGで選び直してください。');throw e}finally{URL.revokeObjectURL(url)}
+}
+function imageControlsBusy(busy){imageBusy=busy;['productImageFile','saveProductImage','removeProductImage','saveEdit','closeEdit'].forEach(id=>$(id).disabled=busy)}
+$('editDialog').addEventListener('cancel',e=>{if(imageBusy)e.preventDefault()});
+$('productImageFile').onchange=async()=>{
+  const file=$('productImageFile').files[0],selection=++imageSelection;if(!file)return;
+  imagePending=null;imageControlsBusy(true);$('productImageStatus').textContent='画像を縮小・圧縮中…';
+  try{const value=await compressProductImage(file);if(selection!==imageSelection)return;imagePending=value;
+    const img=document.createElement('img');img.src=value.dataUrl;img.alt='保存前のプレビュー';img.style.cssText='max-width:100%;height:120px;object-fit:contain';$('productImagePreview').replaceChildren(img);
+    $('productImageStatus').textContent=`${value.width}×${value.height}px・${(value.bytes/1024).toFixed(1)}KB（未保存）`;
+  }catch(e){$('productImageStatus').textContent=imageError(e)}finally{imageControlsBusy(false)}
+};
+async function saveProductImage(remove=false){
+  if(imageBusy)return;
+  if(!imageUser||!imageReady||!navigator.onLine){$('productImageStatus').textContent='オンラインでGoogleログイン・画像同期の接続を確認してください。';return}
+  if(!remove&&!imagePending){$('productImageStatus').textContent='先に画像を選んでください。';return}
+  if(!imageHeads.has(imageEditorKey)&&imageHeads.size>=IMAGE_MAX_COUNT){$('productImageStatus').textContent='画像登録は最大500商品です。追加を停止しました。';return}
+  if(imageEditorKey.length>1400){$('productImageStatus').textContent='商品名が長すぎるため画像を登録できません。';return}
+  if(remove&&!confirm('この商品の全店舗共通画像を削除しますか？価格記録は削除しません。'))return;
+  const key=imageEditorKey,uid=imageUser,epoch=imageEpoch,revision=crypto.randomUUID();
+  let value=remove?{deleted:true,revision}:{...imagePending,deleted:false,revision};
+  if(!remove&&!validImage(value))return;
+  imageControlsBusy(true);$('productImageStatus').textContent='画像を保存・同期中…';
+  try{const batch=writeBatch(db);
+    // Soft deletion retains one compressed image for recovery, never any original photo.
+    if(remove){const previous=await getDoc(doc(db,'users',uid,'productImages',key));if(previous.exists())value={...previous.data(),deleted:true,revision}}
+    batch.set(doc(db,'users',uid,'productImages',key),{...value,productId:key,updatedAt:serverTimestamp()});
+    batch.set(doc(db,'users',uid,'productImageHeads',key),{revision,deleted:remove,bytes:remove?0:value.bytes,updatedAt:serverTimestamp()});
+    await batch.commit();if(epoch!==imageEpoch)return;
+    imageHeads.set(key,{revision,deleted:remove});imageCache.set(uid+'/'+key,value);await imageDisk('put',uid+'/'+key,value);imagePending=null;
+    document.querySelectorAll('[data-image-product]').forEach(el=>{if(el.dataset.imageProduct===key)imageObserver.observe(el)});imageControlsBusy(false);await paintProductImage($('productImagePreview'));
+    $('productImageStatus').textContent=remove?'画像を削除して同期しました。':'画像を保存して同期しました。';$('productImageFile').value='';
+    $('restoreProductImage').disabled=!remove;
+  }catch(e){$('productImageStatus').textContent='未保存：'+imageError(e)}finally{imageControlsBusy(false)}
+}
+$('saveProductImage').onclick=()=>saveProductImage(false);
+$('removeProductImage').onclick=()=>saveProductImage(true);
+const restoreImageButton=document.createElement('button');restoreImageButton.id='restoreProductImage';restoreImageButton.type='button';restoreImageButton.className='cardaction';restoreImageButton.textContent='削除した画像を復元';restoreImageButton.disabled=true;$('imageEditor').append(restoreImageButton);
+restoreImageButton.onclick=async()=>{
+  if(imageBusy||!imageUser||!imageReady)return;
+  const epoch=imageEpoch,key=imageEditorKey;imageControlsBusy(true);
+  try{const snap=await getDoc(doc(db,'users',imageUser,'productImages',key));if(epoch!==imageEpoch)return;
+    const value=snap.exists()?snap.data():null;if(!validImage(value))throw Error('復元できる画像がありません。');imagePending={dataUrl:value.dataUrl,width:value.width,height:value.height,bytes:value.bytes,mime:value.mime};imageControlsBusy(false);await saveProductImage(false);
+  }catch(e){$('productImageStatus').textContent=imageError(e)}finally{imageControlsBusy(false)}
+};
 fillSources();favs();renderProducts();
 </script></body></html>
