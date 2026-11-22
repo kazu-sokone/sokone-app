@@ -28,12 +28,30 @@ h1{font-size:25px;margin:5px 0}.sub{color:#777;font-size:13px}.legend{display:gr
 dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius:18px;padding:0;box-shadow:0 20px 70px #0005}dialog::backdrop{background:#0008}.modalbody{padding:18px;overflow:auto;max-height:90vh}.modalhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.modalhead h2{margin:0;font-size:21px}.closebtn{border:0;border-radius:10px;background:#eee;padding:8px 12px;font-weight:1000}.editgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editfield{margin-top:10px}.editfield.full{grid-column:1/-1}.editfield label,.modebox legend{display:block;margin-bottom:4px;font-size:13px;font-weight:1000}.editfield input,.editfield select,.editfield textarea{width:100%;min-height:44px;border:1px solid #bbb;border-radius:10px;padding:8px 10px;background:#fff;font-size:16px}.editfield textarea{min-height:76px;resize:vertical}.modebox{grid-column:1/-1;margin-top:12px;border:2px solid #f1b24b;border-radius:12px;padding:10px;background:#fff8e8}.modebox label{display:block;padding:5px 0;font-weight:900}.editbuttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}.saveedit,.deleteedit{min-height:48px;border:0;border-radius:12px;font-weight:1000}.saveedit{background:#1769e0;color:#fff}.deleteedit{background:#ffe1e1;color:#962c2c}.historylist{display:grid;gap:8px}.historyrow{border:1px solid #ddd;border-radius:13px;padding:10px;background:#fff}.historyrowtop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.historyinfo{font-weight:900;line-height:1.55}.historyedit{border:0;border-radius:9px;padding:8px 11px;background:#eaf2ff;color:#174f98;font-weight:1000}
 @media(max-width:480px){.row{display:block}.pricebox{min-width:0;margin-top:10px}.price,.unit{text-align:left}.best .price{font-size:46px}}
 @media(max-width:520px){.editgrid{grid-template-columns:1fr}.editfield.full,.modebox{grid-column:1}.editbuttons{grid-template-columns:1fr}}
+/* Compact comparison grid; detailed records retain their existing layout. */
+.app,.navs{max-width:1100px}
+#results,#sourceResults,#favResults{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+#results .group{display:contents}#results .group>h2{display:none}
+#results>.guide,#sourceResults>.guide,#favResults>.guide{grid-column:1/-1}
+.compactcard{appearance:none;display:flex;flex-direction:column;gap:5px;min-width:0;width:100%;margin:0;padding:10px;text-align:left;color:inherit;background:white;border:1px solid #ddd;border-radius:14px;cursor:pointer;overflow-wrap:anywhere}
+.compactcard.best{outline:none;border:2px solid #49b768;padding:9px;background:#f7fff8}
+.compactcard:focus-visible{outline:3px solid #1769e0;outline-offset:2px}
+.thumb{display:grid;place-items:center;position:relative;width:100%;height:80px;background:#f1f3f5;border-radius:9px;overflow:hidden;color:#858b94;font-size:12px}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
+.compactname{font-size:15px;line-height:1.35;font-weight:900;min-height:2.7em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.compactstore{font-size:15px;font-weight:900;line-height:1.3;color:#124f9c;background:#eaf2ff;border-radius:6px;padding:4px 5px}
+.compactspec{font-size:12px;line-height:1.4;color:#444}
+.compactprice{font-size:26px;font-weight:1000;line-height:1.15;margin-top:auto;font-variant-numeric:tabular-nums}.compactprice small{font-size:12px}.compactunit{font-size:12px;font-weight:800;line-height:1.4}
+.compacthint{font-size:10px;color:#777}.categoryfilter{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.categoryfilter select{min-width:0;flex:1;min-height:42px;font-size:16px;border:1px solid #bbb;border-radius:10px;background:#fff;padding:7px}
+@media(min-width:700px){#results,#sourceResults,#favResults{grid-template-columns:repeat(3,minmax(0,1fr))}.thumb{height:110px}}
+@media(min-width:1000px){#results,#sourceResults,#favResults{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style></head><body><div class="app">
 <h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・登録済み商品を一覧表示</div>
 <div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
 <div class="legend"><span class="f">🟢30日以内</span><span class="w">🟡31〜90日</span><span class="o">🔴91日〜</span><span class="p">🏆過去最安</span></div>
 <section id="products" class="panel active">
 <div class="search"><input id="q" placeholder="商品名・ジャンル・メーカーなど"><button id="go">検索</button></div>
+<label class="categoryfilter">ジャンル<select id="categoryFilter"><option value="">すべて</option></select></label>
 <div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
 <div id="results"></div>
 </section>
@@ -75,6 +93,7 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 </div><div class="editbuttons"><button id="saveEdit" class="saveedit" type="submit">保存して同期</button><button id="deleteEdit" class="deleteedit" type="button">この価格記録を削除</button></div></form></div></dialog>
 <dialog id="historyDialog"><div class="modalbody"><div class="modalhead"><h2 id="historyTitle">価格履歴</h2><button id="closeHistory" class="closebtn" type="button">閉じる</button></div><div id="historyList" class="historylist"></div></div></dialog>
 <div class="bottom"><div class="navs"><button class="nav active" data-p="products">🔎<br>商品</button><button class="nav" data-p="sources">🏬<br>販売元</button><button class="nav" data-p="favorites">⭐<br>いつもの</button><button class="nav" data-p="add">＋<br>登録</button></div></div>
+<dialog id="detailDialog"><div class="modalbody"><div class="modalhead"><h2>商品詳細</h2><button id="closeDetail" class="closebtn" type="button">閉じる</button></div><div id="detailContent"></div></div></dialog>
 <script src="migration-data.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
@@ -281,6 +300,12 @@ function specification(x){
   return parts.join("・");
 }
 function card(x,best){
+  const u=base(x),esc=optionText;
+  // Only a dedicated thumbnail is used; never fetch a full-size photo for a list.
+  const thumbnail=typeof x.thumbnailUrl==="string"&&/^https:\/\//.test(x.thumbnailUrl)?x.thumbnailUrl:"";
+  return `<button type="button" class="compactcard ${best?'best':''}" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}の詳細"><span class="thumb"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactstore">${esc(x.source||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">詳細・価格履歴を見る ›</span></button>`;
+}
+function detailCard(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
       del=prev&&Number(x.price)>0&&Number(prev.price)>0?x.price-prev.price:null,
       priced=D.filter(z=>z.p===x.p&&Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
@@ -340,8 +365,10 @@ function renderHistory(productName){
 }
 function openHistory(id){const item=D.find(x=>String(x.id)===String(id));if(!item)return;renderHistory(item.p);$("historyDialog").showModal()}
 function bindCardActions(root=document){
-  root.querySelectorAll("[data-edit-id]").forEach(b=>b.onclick=()=>{if($("historyDialog").open)$("historyDialog").close();openEditor(b.dataset.editId)});
-  root.querySelectorAll("[data-history-id]").forEach(b=>b.onclick=()=>openHistory(b.dataset.historyId));
+  root.querySelectorAll(".thumb img").forEach(img=>{img.onerror=()=>img.remove()});
+  root.querySelectorAll("[data-detail-id]").forEach(b=>b.onclick=()=>{const item=D.find(x=>String(x.id)===b.dataset.detailId);if(!item)return;$("detailContent").innerHTML=detailCard(item,false);bindCardActions($("detailContent"));$("detailDialog").showModal()});
+  root.querySelectorAll("[data-edit-id]").forEach(b=>b.onclick=()=>{if($("detailDialog").open)$("detailDialog").close();if($("historyDialog").open)$("historyDialog").close();openEditor(b.dataset.editId)});
+  root.querySelectorAll("[data-history-id]").forEach(b=>b.onclick=()=>{if($("detailDialog").open)$("detailDialog").close();openHistory(b.dataset.historyId)});
 }
 const normalizeSearch=v=>String(v??"").normalize("NFKC").toLowerCase().replace(/[、,／/|]+/g," ").replace(/\s+/g," ").trim();
 const searchableText=x=>normalizeSearch([x.displayName,x.p,x.formalName,x.majorCategory,x.cat,x.minorCategory,x.manufacturerName,x.brandName,x.searchWords].join(" "));
@@ -366,7 +393,11 @@ function renderOptimisticChange(beforeItem,afterItem){
 }
 function renderProducts(q=""){
   const terms=normalizeSearch(q).split(" ").filter(Boolean);
-  let all=latest(),r=terms.length?all.filter(x=>terms.every(t=>searchableText(x).includes(t))):all,groups={};
+  const selected=$("categoryFilter").value;
+  const categories=[...new Set(D.flatMap(x=>[x.majorCategory||x.cat,x.minorCategory]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ja"));
+  $("categoryFilter").innerHTML='<option value="">すべて</option>'+categories.map(c=>`<option value="${optionText(c)}">${optionText(c)}</option>`).join("");
+  $("categoryFilter").value=categories.includes(selected)?selected:"";
+  let all=latest(),r=all.filter(x=>(!$("categoryFilter").value||[x.majorCategory||x.cat,x.minorCategory].includes($("categoryFilter").value))&&terms.every(t=>searchableText(x).includes(t))),groups={};
   r.forEach(x=>(groups[x.p]??=[]).push(x));
   let names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ja"));
   $("productCount").textContent=`${names.length}商品`;
@@ -375,6 +406,8 @@ function renderProducts(q=""){
   bindCardActions($("results"));
 }
 function search(){renderProducts($("q").value)}
+$("categoryFilter").onchange=search;
+$("closeDetail").onclick=()=>$("detailDialog").close();
 $("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();search()}});
 function renderSourceResults(source){
   if(!source){$("sourceResults").innerHTML='<div class="guide">販売元を選んでください。</div>';return}
