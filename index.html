@@ -40,10 +40,10 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 .compactmain:focus-visible,.compactedit:focus-visible{outline:3px solid #1769e0;outline-offset:2px}
 .thumb{display:grid;place-items:center;position:relative;width:100%;height:80px;background:#f1f3f5;border-radius:9px;overflow:hidden;color:#858b94;font-size:12px}
 .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
-.compactname{font-size:15px;line-height:1.35;font-weight:900;min-height:2.7em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.compactname{font-size:18px;line-height:1.35;font-weight:900;min-height:2.7em}
 .compactstore{font-size:15px;font-weight:900;line-height:1.3;color:#124f9c;background:#eaf2ff;border-radius:6px;padding:4px 5px}
 .compactspec{font-size:12px;line-height:1.4;color:#444}
-.compactprice{font-size:26px;font-weight:1000;line-height:1.15;margin-top:auto;font-variant-numeric:tabular-nums}.compactprice small{font-size:12px}.compactunit{font-size:12px;font-weight:800;line-height:1.4}
+.compactprice{font-size:28px;font-weight:1000;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}.compactprice small{font-size:12px}.compactunit{font-size:12px;font-weight:800;line-height:1.4}
 .compacthint{font-size:10px;color:#777}.categoryfilter{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.categoryfilter select{min-width:0;flex:1;min-height:42px;font-size:16px;border:1px solid #bbb;border-radius:10px;background:#fff;padding:7px}
 @media(min-width:700px){#results,#sourceResults,#favResults{grid-template-columns:repeat(3,minmax(0,1fr))}.thumb{height:110px}}
 @media(min-width:1000px){#results,#sourceResults,#favResults{grid-template-columns:repeat(4,minmax(0,1fr))}}
@@ -54,7 +54,7 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 <section id="products" class="panel active">
 <div class="search"><input id="q" placeholder="商品名・ジャンル・メーカーなど"><button id="go">検索</button></div>
 <label class="categoryfilter">ジャンル<select id="categoryFilter"><option value="">すべて</option></select></label>
-<div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
+<p class="compacthint">同じ商品・容量は1カード。日付がある最新記録を表示し、同日の複数価格は最安を表示します。日付不明のみの場合は参考最安価格です。店舗での現在価格を保証するものではありません。</p><div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
 <div id="results"></div>
 </section>
 <section id="sources" class="panel"><div id="sourceBtns"></div><div id="sourceResults"></div></section>
@@ -249,8 +249,32 @@ function base(x){
   let per=(u==="g"||u==="ml")?100:1;
   return {v:a&&Number(x.price)>0?x.price/a*per:null,l:u==="g"?"円/100g":u==="ml"?"円/100ml":"円/1"+u}
 }
-function latest(){let m={};D.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(x=>m[x.p+"|"+x.source+"|"+x.amount+x.unit]=x);return Object.values(m)}
-function hist(x){return D.filter(z=>z.p===x.p&&z.source===x.source).sort((a,b)=>(a.date||"").localeCompare(b.date||""))}
+// A derived master keeps every original price record intact. Rebuilt from synced
+// records on each client; no bulk rewrite, deletion or duplicate image payloads.
+function variantKey(x){
+  const name=String(x.displayName||x.p||'').normalize('NFKC').trim();
+  const spec=specification(x).normalize('NFKC').replace(/,/g,'').replace(/\s+/g,'').replace(/(\d+(?:\.\d+)?)kg/g,(_,n)=>Number(n)*1000+'g').replace(/(\d+(?:\.\d+)?)L/g,(_,n)=>Number(n)*1000+'ml');
+  return JSON.stringify([name,spec,...['formalName','manufacturerName','brandName','variantSpecification'].map(k=>String(x[k]||'').normalize('NFKC').trim())]);
+}
+function comparePriceRecords(a,b){
+  const dateOrder=String(b.date||'').localeCompare(String(a.date||''));
+  if(dateOrder)return dateOrder;
+  const pa=Number(a.price)>0?Number(a.price):Infinity,pb=Number(b.price)>0?Number(b.price):Infinity;
+  return pa-pb||String(a.id).localeCompare(String(b.id));
+}
+function productMasters(records=D){
+  const masters=new Map();
+  records.forEach(record=>{const id=variantKey(record);if(!masters.has(id))masters.set(id,{id,records:[]});masters.get(id).records.push(record)});
+  masters.forEach(master=>{master.records.sort(comparePriceRecords);master.current=master.records[0];master.imageId=imageProductId(master.current)});
+  return [...masters.values()];
+}
+function variantHistory(x){return D.filter(z=>variantKey(z)===variantKey(x)).sort(comparePriceRecords)}
+function latest(records=D){return productMasters(records).map(m=>m.current)}
+function hist(x){return variantHistory(x).filter(z=>z.source===x.source).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')))}
+function recordConditions(x){
+  return [...new Set([x.priceType,x.conditions,x.purchaseConditions,x.specialConditions,Number(x.purchaseCount)>1?`${x.purchaseCount}${x.purchaseUnit||'点'}まとめ買い`:'' ].filter(Boolean))].join('・');
+}
+function priceBasis(x){return x.date?`最新記録：${x.date}`:'参考価格：日付不明の記録から表示'}
 function brandLabel(x){
   let t=x.brandType||"unknown", n=(x.brandName||"").trim();
   if(t==="pb") return `<span class="brandtag pbtag">🏷️ オリジナル・PB${n?"："+n:""}</span>`;
@@ -306,18 +330,18 @@ function card(x,best){
   const u=base(x),esc=optionText;
   // Only a dedicated thumbnail is used; never fetch a full-size photo for a list.
   const thumbnail=typeof x.thumbnailUrl==="string"&&/^https:\/\//.test(x.thumbnailUrl)?x.thumbnailUrl:"";
-  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactstore">${esc(x.source||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">詳細・価格履歴を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}を編集">✏️ 編集</button></div>`;
+  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactstore">${esc(x.source||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">${esc(priceBasis(x))}</span><span class="compacthint">価格履歴 ${variantHistory(x).length}件を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}を編集">✏️ 編集</button></div>`;
 }
 function detailCard(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
       del=prev&&Number(x.price)>0&&Number(prev.price)>0?x.price-prev.price:null,
-      priced=D.filter(z=>z.p===x.p&&Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
+      priced=variantHistory(x).filter(z=>Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
   const sourceIcon=S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬";
   return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="storename">${sourceIcon} ${x.source}</div><div class="spec">${specification(x)}</div></div>
   <div class="pricebox"><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
   <div class="meta"><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
   <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}
-  <div class="date">📅 登録日：${x.date||"不明"}</div>
+  <div class="date">📅 ${optionText(priceBasis(x))}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
   ${lo?`<div class="low">🏆 過去最安：<span class="historyshop">🏬 ${lo.source}</span><br>${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
   ${x.note?`<div class="note">📝 ${x.note}</div>`:""}
@@ -361,13 +385,13 @@ function openEditor(id){
   $("editDialog").showModal();
   openImageEditor(item);
 }
-function renderHistory(productName){
-  const rows=D.filter(x=>x.p===productName).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  $("historyTitle").textContent=`${productName}｜価格履歴`;
-  $("historyList").innerHTML=rows.map(x=>`<div class="historyrow"><div class="historyrowtop"><div class="historyinfo">🏬 ${optionText(x.source)}<br>${specification(x)}<br>${Number(x.price)>0?yen(x.price)+"円":"価格未確認"}　📅 ${x.date||"日付不明"}</div><button class="historyedit" type="button" data-edit-id="${x.id}">編集</button></div></div>`).join("")||'<div class="guide">価格履歴がありません。</div>';
+function renderHistory(item){
+  const rows=variantHistory(item);
+  $("historyTitle").textContent=`${item.p} ${specification(item)}｜価格履歴`;
+  $("historyList").innerHTML=rows.map(x=>`<div class="historyrow"><div class="historyrowtop"><div class="historyinfo"><b>${Number(x.price)>0?yen(x.price)+"円":"価格未確認"}</b>　🏬 ${optionText(x.source)}<br>${optionText(specification(x))}<br>📅 ${optionText(x.date||"日付不明")}<br>条件：${optionText(recordConditions(x)||"記録なし")}${x.note?`<div class="note">備考：${optionText(x.note)}</div>`:''}${x.originalMemo?`<details><summary>元メモ</summary>${optionText(x.originalMemo)}</details>`:''}</div><button class="historyedit" type="button" data-edit-id="${optionText(x.id)}">編集</button></div></div>`).join("")||'<div class="guide">価格履歴がありません。</div>';
   bindCardActions($("historyList"));
 }
-function openHistory(id){const item=D.find(x=>String(x.id)===String(id));if(!item)return;renderHistory(item.p);$("historyDialog").showModal()}
+function openHistory(id){const item=D.find(x=>String(x.id)===String(id));if(!item)return;renderHistory(item);$("historyDialog").showModal()}
 function bindCardActions(root=document){
   observeProductImages(root);
   root.querySelectorAll(".thumb img").forEach(img=>{img.onerror=()=>img.remove()});
@@ -378,13 +402,13 @@ function bindCardActions(root=document){
 const normalizeSearch=v=>String(v??"").normalize("NFKC").toLowerCase().replace(/[、,／/|]+/g," ").replace(/\s+/g," ").trim();
 const searchableText=x=>normalizeSearch([x.displayName,x.p,x.formalName,x.majorCategory,x.cat,x.minorCategory,x.manufacturerName,x.brandName,x.searchWords].join(" "));
 function productGroupMarkup(name,items){
-  const values=items.map(x=>({x,u:base(x).v})).filter(z=>z.u!=null),best=values.length?values.reduce((a,b)=>a.u<=b.u?a:b).x:null;
-  return `<div class="group" data-product-key="${optionText(encodeURIComponent(name))}"><h2>${name}</h2>${items.sort((x,y)=>(base(x).v||1e9)-(base(y).v||1e9)).map(x=>card(x,best&&x.id===best.id)).join("")}</div>`;
+  return `<div class="group" data-product-key="${optionText(encodeURIComponent(name))}"><h2>${optionText(name)}</h2>${items.map(x=>card(x,false)).join("")}</div>`;
 }
 function renderOneProductGroup(name){
   const key=encodeURIComponent(name),group=[...document.querySelectorAll("#results .group")].find(el=>el.dataset.productKey===key);
   if(!group)return renderProducts($("q")?.value||"");
-  const items=latest().filter(x=>x.p===name);if(!items.length)return renderProducts($("q")?.value||"");
+  const terms=normalizeSearch($("q")?.value||"").split(" ").filter(Boolean),selected=$("categoryFilter").value;
+  const items=productMasters().filter(m=>m.current.p===name&&m.records.some(x=>(!selected||[x.majorCategory||x.cat,x.minorCategory].includes(selected))&&terms.every(t=>searchableText(x).includes(t)))).map(m=>m.current);if(!items.length)return renderProducts($("q")?.value||"");
   group.outerHTML=productGroupMarkup(name,items);bindCardActions($("results"));
 }
 function renderOptimisticChange(beforeItem,afterItem){
@@ -393,7 +417,7 @@ function renderOptimisticChange(beforeItem,afterItem){
   const searchFields=["p","displayName","formalName","majorCategory","cat","minorCategory","manufacturerName","brandName","searchWords"];
   const sameProduct=beforeItem&&afterItem&&beforeItem.p===afterItem.p;
   const searchSame=sameProduct&&searchFields.every(k=>String(beforeItem[k]??"")===String(afterItem[k]??""));
-  if(searchSame)return renderOneProductGroup(afterItem.p);
+  if(searchSame&&variantKey(beforeItem)===variantKey(afterItem))return renderOneProductGroup(afterItem.p);
   renderProducts($("q")?.value||"");
 }
 function renderProducts(q=""){
@@ -402,10 +426,10 @@ function renderProducts(q=""){
   const categories=[...new Set(D.flatMap(x=>[x.majorCategory||x.cat,x.minorCategory]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ja"));
   $("categoryFilter").innerHTML='<option value="">すべて</option>'+categories.map(c=>`<option value="${optionText(c)}">${optionText(c)}</option>`).join("");
   $("categoryFilter").value=categories.includes(selected)?selected:"";
-  let all=latest(),r=all.filter(x=>(!$("categoryFilter").value||[x.majorCategory||x.cat,x.minorCategory].includes($("categoryFilter").value))&&terms.every(t=>searchableText(x).includes(t))),groups={};
+  let r=productMasters().filter(m=>m.records.some(x=>(!$("categoryFilter").value||[x.majorCategory||x.cat,x.minorCategory].includes($("categoryFilter").value))&&terms.every(t=>searchableText(x).includes(t)))).map(m=>m.current),groups={};
   r.forEach(x=>(groups[x.p]??=[]).push(x));
   let names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ja"));
-  $("productCount").textContent=`${names.length}商品`;
+  $("productCount").textContent=`${r.length}商品バリエーション（${names.length}商品名）`;
   if(!names.length){$("results").innerHTML='<div class="guide">該当する商品がありません。</div>';return}
   $("results").innerHTML=names.map(n=>productGroupMarkup(n,groups[n])).join("");
   bindCardActions($("results"));
@@ -417,12 +441,12 @@ $("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter")
 function renderSourceResults(source){
   if(!source){$("sourceResults").innerHTML='<div class="guide">販売元を選んでください。</div>';return}
   currentSource=source;
-  $("sourceResults").innerHTML=latest().filter(x=>x.source===source).map(x=>card(x,false)).join("")||'<div class="guide">登録がありません。</div>';
+  $("sourceResults").innerHTML=latest(D.filter(x=>x.source===source)).map(x=>card(x,false)).join("")||'<div class="guide">登録がありません。</div>';
   document.querySelectorAll(".sourcebtn").forEach(b=>b.classList.toggle("active",b.dataset.s===source));
   bindCardActions($("sourceResults"));
 }
 function fillSources(){$("so").innerHTML=S.map(s=>`<option>${s.name}</option>`).join("");$("sourceBtns").innerHTML=S.map(s=>`<button class="sourcebtn" data-s="${s.name}">${s.type==="person"?"👤":"🏬"}${s.name}</button>`).join("");document.querySelectorAll(".sourcebtn").forEach(b=>b.onclick=()=>renderSourceResults(b.dataset.s));if(currentSource)renderSourceResults(currentSource)}
-function favs(){$("favResults").innerHTML=latest().filter(x=>x.fav).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>';bindCardActions($("favResults"))}
+function favs(){$("favResults").innerHTML=productMasters().filter(m=>m.records.some(x=>x.fav)).map(m=>m.current).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>';bindCardActions($("favResults"))}
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n===b));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===b.dataset.p));if(b.dataset.p==="sources")fillSources();if(b.dataset.p==="favorites")favs()});
 let now=new Date();$("dt").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
 $("addPrice").onclick=async()=>{
