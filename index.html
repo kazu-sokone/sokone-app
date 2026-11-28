@@ -47,10 +47,14 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 .compacthint{font-size:10px;color:#777}.categoryfilter{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.categoryfilter select{min-width:0;flex:1;min-height:42px;font-size:16px;border:1px solid #bbb;border-radius:10px;background:#fff;padding:7px}
 @media(min-width:700px){#results,#sourceResults,#favResults{grid-template-columns:repeat(3,minmax(0,1fr))}.thumb{height:110px}}
 @media(min-width:1000px){#results,#sourceResults,#favResults{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.priceModes{display:flex;gap:10px;margin:12px 0}.priceModes button{min-height:44px;padding:10px 22px;border:2px solid #1769e0;border-radius:12px;background:#fff;color:#174f98;font-weight:900}.priceModes button[aria-pressed="true"]{background:#1769e0;color:#fff}</style></head><body><div class="app">
+.priceModes{display:flex;gap:10px;margin:12px 0}.priceModes button{min-height:44px;padding:10px 22px;border:2px solid #1769e0;border-radius:12px;background:#fff;color:#174f98;font-weight:900}.priceModes button[aria-pressed="true"]{background:#1769e0;color:#fff}
+body:not(.owner-ready) .panel,body:not(.owner-ready) .bottom{display:none!important}
+body.owner-ready #ownerGate{display:none}
+</style></head><body><div class="app">
 <h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・登録済み商品を一覧表示</div>
-<div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
+<div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">所有者本人のGoogleアカウントでログインしてください。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
 
+<p id="ownerGate" class="form">このページは所有者本人専用です。<br>紹介・見学は <a href="demo.html">底値帳デモ（見学用）</a> をご利用ください。</p>
 <section id="products" class="panel active">
 <div class="search"><input id="q" placeholder="商品名・俗称・ジャンルなどで検索"><button id="go">検索</button></div>
 <label class="categoryfilter">ジャンル<select id="categoryFilter"><option value="">すべて</option></select></label>
@@ -98,7 +102,7 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 <dialog id="historyDialog"><div class="modalbody"><div class="modalhead"><h2 id="historyTitle">価格履歴</h2><button id="closeHistory" class="closebtn" type="button">閉じる</button></div><div id="historyList" class="historylist"></div></div></dialog>
 <div class="bottom"><div class="navs"><button class="nav active" data-p="products">🔎<br>商品</button><button class="nav" data-p="sources">🏬<br>販売元</button><button class="nav" data-p="favorites">⭐<br>いつもの</button><button class="nav" data-p="add">＋<br>登録</button></div></div>
 <dialog id="detailDialog"><div class="modalbody"><div class="modalhead"><h2>商品詳細</h2><button id="closeDetail" class="closebtn" type="button">閉じる</button></div><div id="detailContent"></div></div></dialog>
-<script src="migration-data.js"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
@@ -117,17 +121,6 @@ const auth = getAuth(firebaseApp);
 auth.useDeviceLanguage();
 const db = getFirestore(firebaseApp);
 const provider = new GoogleAuthProvider();
-const memoMigration=window.SOKONE_MEMO_MIGRATION||{version:"",sources:[],data:[]};
-
-const seedS=[{name:"たいらや",type:"shop"},{name:"昭和食品",type:"shop"},{name:"D2",type:"shop"},{name:"コスモス",type:"shop"},{name:"カインズホーム",type:"shop"}];
-const seedD=[
-{id:1,p:"ガーリックトマト",displayName:"ガーリックトマト",price:150,date:"2025-04-11",source:"たいらや",amount:240,unit:"g",cat:"食品",majorCategory:"食品",minorCategory:"パスタソース",searchWords:"パスタソース、スパゲッティソース、トマトソース",fav:true},
-{id:2,p:"ガーリックトマト",displayName:"ガーリックトマト",price:215,date:"2025-09-16",source:"たいらや",amount:240,unit:"g",cat:"食品",majorCategory:"食品",minorCategory:"パスタソース",searchWords:"パスタソース、スパゲッティソース、トマトソース",fav:true},
-{id:3,p:"ガーリックトマト",displayName:"ガーリックトマト",price:204,date:"2026-07-23",source:"たいらや",amount:240,unit:"g",cat:"食品",majorCategory:"食品",minorCategory:"パスタソース",searchWords:"パスタソース、スパゲッティソース、トマトソース",fav:true},
-{id:4,p:"栃木県産コシヒカリ",price:7106,date:"2026-04-22",source:"昭和食品",amount:10,unit:"kg",cat:"食品",fav:true},
-{id:5,p:"栃木県産コシヒカリ",price:6264,date:"2026-07-15",source:"昭和食品",amount:10,unit:"kg",cat:"食品",fav:true},
-{id:6,p:"D2トイレットペーパー",price:690,date:"",source:"D2",amount:600,unit:"m",cat:"日用品",fav:true,note:"50m×12ロール／2個1,298円の記録あり"}
-];
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const putLocal=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const legacyMetadata={
@@ -155,34 +148,8 @@ function normalizeItem(x={}){
     metersPerRoll:x.metersPerRoll??known.metersPerRoll??null
   };
 }
-function hasLegacyEquivalent(items,record){
-  const known={
-    R0158:{source:"たいらや",price:150,date:"2025-04-11"},
-    R0159:{source:"たいらや",price:215,date:"2025-09-16"},
-    R0160:{source:"たいらや",price:204,date:"2026-07-23"},
-    R0266:{source:"昭和食品",price:7106,date:"2026-04-22"},
-    R0270:{source:"昭和食品",price:6264,date:"2026-07-15"},
-    R0080:{source:"D2",price:690,date:""}
-  }[record.recordId];
-  if(!known)return false;
-  return items.some(x=>x.source===known.source&&Number(x.price)===known.price&&String(x.date||"")===known.date);
-}
-function applyMemoMigration(sources,data,migrations){
-  if(!memoMigration.version||migrations.includes(memoMigration.version))return {sources,data,migrations,added:0};
-  const sm=new Map(sources.map(x=>[x.name,x]));
-  memoMigration.sources.forEach(x=>{if(x?.name&&!sm.has(x.name))sm.set(x.name,x)});
-  const ids=new Set(data.map(x=>String(x.id)));
-  let added=0;
-  memoMigration.data.forEach(record=>{
-    if(ids.has(String(record.id))||hasLegacyEquivalent(data,record))return;
-    data.push(normalizeItem(record));ids.add(String(record.id));added++;
-  });
-  return {sources:[...sm.values()],data,migrations:[...migrations,memoMigration.version],added};
-}
-let S=get("kazuS",seedS),D=get("kazuD",seedD).map(normalizeItem),M=get("kazuMigrations",[]);
-const initialMigration=applyMemoMigration(S,D,M);
-S=initialMigration.sources;D=initialMigration.data;M=initialMigration.migrations;
-putLocal("kazuS",S);putLocal("kazuD",D);putLocal("kazuMigrations",M);
+// Private records are hydrated only after the verified owner signs in.
+let S=[],D=[],M=[];
 const $=x=>document.getElementById(x),yen=n=>Number(n).toLocaleString("ja-JP");
 let cloudRef=null,recordsRef=null,cloudReady=false,applyingCloud=false,unsubscribeCloud=null,unsubscribeRecords=null,currentUser=null;
 let stateData=D.map(x=>({...x})),recordChanges=new Map(),currentSource="";
@@ -192,6 +159,7 @@ function setSync(title,detail="",kind=""){
 }
 function saveLocal(){putLocal("kazuS",S);putLocal("kazuD",D);putLocal("kazuMigrations",M)}
 async function saveAll(){
+  if(!isOwner())return false;
   saveLocal();
   if(!cloudRef||!cloudReady||applyingCloud)return "local";
   try{
@@ -224,6 +192,7 @@ function renderCurrentPanel(){
 }
 function recordDocumentId(id){return encodeURIComponent(String(id)).replace(/%/g,"_")}
 async function saveRecordChange(id,change){
+  if(!isOwner())return false;
   const key=String(id),beforeChange=recordChanges.has(key)?recordChanges.get(key):undefined;
   const beforeItem=D.find(x=>String(x.id)===key)||null;
   recordChanges.set(key,change);applyRecordChanges(false);
@@ -478,6 +447,7 @@ function fillSources(){
 let editingStore=null,storeSaving=false;
 function openStoreEditor(key=null){editingStore=key;$("storeName").value=key?sourceLabel(key):'';$("storeDialogTitle").textContent=key?'販売店名を変更':'販売店を追加';$("storeError").textContent='';$("storeDialog").showModal()}
 async function saveStoreChange(key,patch){
+  if(!isOwner())return false;
   if(storeSaving)return false;
   if(!cloudRef||!cloudReady||!navigator.onLine){$("storeStatus").textContent='Googleログインとオンライン同期完了後に操作してください。';return false}
   storeSaving=true;$("saveStore").disabled=true;
@@ -575,22 +545,39 @@ $("loginBtn").onclick=async()=>{
 };
 $("logoutBtn").onclick=async()=>{await firebaseSignOut(auth)};
 
+const OWNER_UID='GG6hrmShwkYOB8edEetUJORDBJn1';
+let authEpoch=0;
+function isOwner(){return currentUser?.uid===OWNER_UID}
 onAuthStateChanged(auth,async user=>{
+  const session=++authEpoch;
+  document.body.classList.remove('owner-ready');
+  document.querySelectorAll('dialog[open]').forEach(el=>el.close());
+  if(user&&user.uid!==OWNER_UID){
+    resetProductImages(null);currentUser=null;cloudReady=false;cloudRef=null;recordsRef=null;
+    if(unsubscribeCloud){unsubscribeCloud();unsubscribeCloud=null}
+    if(unsubscribeRecords){unsubscribeRecords();unsubscribeRecords=null}
+    S=[];D=[];M=[];stateData=[];recordChanges.clear();renderAll();
+    await firebaseSignOut(auth);alert('このアプリは所有者本人専用です。見学用ページをご利用ください。');return;
+  }
   resetProductImages(user);
   currentUser=user||null;
   if(unsubscribeCloud){unsubscribeCloud();unsubscribeCloud=null}
   if(unsubscribeRecords){unsubscribeRecords();unsubscribeRecords=null}
   cloudRef=null;recordsRef=null;cloudReady=false;
   if(!user){
+    S=[];D=[];M=[];stateData=[];recordChanges.clear();renderAll();
     $("loginBtn").hidden=false;$("logoutBtn").hidden=true;
-    setSync("☁️ 同期：未接続","Googleログインすると、PCとiPhoneで同じ底値データを使えます。");
+    setSync("☁️ 同期：未接続","所有者本人のGoogleアカウントでログインしてください。");
     return;
   }
+  S=get('kazuS',[]);D=get('kazuD',[]).map(normalizeItem);M=get('kazuMigrations',[]);
+  stateData=D.map(x=>({...x}));recordChanges.clear();
   $("loginBtn").hidden=true;$("logoutBtn").hidden=false;
   setSync("☁️ 接続中…","クラウドの底値データを確認しています。");
   cloudRef=doc(db,"users",user.uid,"app","state");
   try{
     const snap=await getDoc(cloudRef);
+    if(session!==authEpoch||!isOwner())return;
     if(snap.exists()){
       // 既存クラウドと、この端末だけに残っている記録を合流してから同期する
       const v=snap.data();
@@ -602,8 +589,7 @@ onAuthStateChanged(auth,async user=>{
       applyingCloud=true; saveLocal();renderAll(); applyingCloud=false;
       const cloudM=Array.isArray(v.migrations)?v.migrations:[];
       M=[...new Set([...M,...cloudM])];
-      const migrated=applyMemoMigration(S,D,M);
-      S=migrated.sources;D=migrated.data;M=migrated.migrations;
+
       stateData=D.map(x=>({...x}));
       await setDoc(cloudRef,{sources:S,data:D,migrations:M,updatedAt:serverTimestamp()},{merge:true});
     }else{
@@ -611,10 +597,13 @@ onAuthStateChanged(auth,async user=>{
       await setDoc(cloudRef,{sources:S,data:D,migrations:M,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
       stateData=D.map(x=>({...x}));
     }
+    if(session!==authEpoch||!isOwner())return;
+    renderAll();document.body.classList.add("owner-ready");
     recordsRef=collection(db,"users",user.uid,"priceRecords");
     cloudReady=true;
     setSync("☁️ 同期済み","PC・iPhoneで同じデータを使用中。","synced");
     unsubscribeCloud=onSnapshot(cloudRef,s=>{
+      if(session!==authEpoch||!isOwner())return;
       if(!s.exists())return;
       const v=s.data(); applyingCloud=true;
       if(Array.isArray(v.sources))S=v.sources;
@@ -624,6 +613,7 @@ onAuthStateChanged(auth,async user=>{
       setSync("☁️ 同期済み","最新データを受信しました。","synced");
     },e=>{console.error(e);setSync("⚠️ 同期エラー","Firestoreのルールを確認してください。","syncerror")});
     unsubscribeRecords=onSnapshot(recordsRef,s=>{
+      if(session!==authEpoch||!isOwner())return;
       const next=new Map();
       s.docs.forEach(record=>{const value=record.data(),id=String(value.id||"");if(id)next.set(id,value.deleted?{deleted:true}:{deleted:false,item:value.item})});
       recordChanges=next;applyingCloud=true;const changed=applyRecordChanges(false);if(changed)renderCurrentPanel();applyingCloud=false;
