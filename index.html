@@ -52,12 +52,13 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 <div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
 <div class="legend"><span class="f">🟢30日以内</span><span class="w">🟡31〜90日</span><span class="o">🔴91日〜</span><span class="p">🏆過去最安</span></div>
 <section id="products" class="panel active">
-<div class="search"><input id="q" placeholder="商品名・ジャンル・メーカーなど"><button id="go">検索</button></div>
+<div class="search"><input id="q" placeholder="商品名・俗称・ジャンルなどで検索"><button id="go">検索</button></div>
 <label class="categoryfilter">ジャンル<select id="categoryFilter"><option value="">すべて</option></select></label>
 <p class="compacthint">同じ商品・容量は1カード。日付がある最新記録を表示し、同日の複数価格は最安を表示します。日付不明のみの場合は参考最安価格です。店舗での現在価格を保証するものではありません。</p><div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
 <div id="results"></div>
 </section>
-<section id="sources" class="panel"><div id="sourceBtns"></div><div id="sourceResults"></div></section>
+<section id="sources" class="panel"><h2>販売店から探す</h2><button id="newStore" class="sourcebtn">＋販売店を追加</button><div id="storeStatus" role="status"></div><div id="sourceBtns"></div><details><summary>一覧から削除した販売店</summary><div id="archivedStores"></div></details><h3 id="selectedStoreTitle"></h3><div id="sourceResults"></div></section>
+<dialog id="storeDialog"><form id="storeForm" class="modalbody"><div class="modalhead"><h2 id="storeDialogTitle">販売店</h2><button type="button" id="closeStore" class="closebtn">閉じる</button></div><label for="storeName">販売店名</label><input id="storeName" required maxlength="100" style="width:100%;min-height:44px"><button class="primary" id="saveStore" type="submit">保存して同期</button><div id="storeError" role="alert"></div></form></dialog>
 <section id="favorites" class="panel"><div id="favResults"></div></section>
 <section id="add" class="panel">
 <div class="form"><h2>＋価格を登録</h2><label>表示名（普段の呼び方）</label><input id="pn" placeholder="例：ミートソース、生ラーメン">
@@ -219,7 +220,7 @@ function renderCurrentPanel(){
   const active=document.querySelector(".panel.active")?.id;
   if(active==="products")renderProducts($("q")?.value||"");
   else if(active==="favorites")favs();
-  else if(active==="sources")renderSourceResults(currentSource);
+  else if(active==="sources")fillSources();
 }
 function recordDocumentId(id){return encodeURIComponent(String(id)).replace(/%/g,"_")}
 async function saveRecordChange(id,change){
@@ -330,27 +331,27 @@ function card(x,best){
   const u=base(x),esc=optionText;
   // Only a dedicated thumbnail is used; never fetch a full-size photo for a list.
   const thumbnail=typeof x.thumbnailUrl==="string"&&/^https:\/\//.test(x.thumbnailUrl)?x.thumbnailUrl:"";
-  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactstore">${esc(x.source||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">${esc(priceBasis(x))}</span><span class="compacthint">価格履歴 ${variantHistory(x).length}件を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(x.source)}を編集">✏️ 編集</button></div>`;
+  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(sourceLabel(x.source))}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactstore">${esc(sourceLabel(x.source)||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">${esc(priceBasis(x))}</span><span class="compacthint">価格履歴 ${variantHistory(x).length}件を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(sourceLabel(x.source))}を編集">✏️ 編集</button></div>`;
 }
 function detailCard(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0?h[i-1]:null,
       del=prev&&Number(x.price)>0&&Number(prev.price)>0?x.price-prev.price:null,
       priced=variantHistory(x).filter(z=>Number(z.price)>0),lo=priced.length?priced.reduce((a,b)=>a.price<=b.price?a:b):null,u=base(x);
   const sourceIcon=S.find(s=>s.name===x.source)?.type==="person"?"👤":"🏬";
-  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="storename">${sourceIcon} ${x.source}</div><div class="spec">${specification(x)}</div></div>
+  return `<div class="card ${best?"best":""}"><div class="row"><div><b>${x.fav?"⭐ ":""}${x.p}</b><div class="storename">${sourceIcon} ${optionText(sourceLabel(x.source))}</div><div class="spec">${specification(x)}</div></div>
   <div class="pricebox"><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
   <div class="meta"><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
   <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}
   <div class="date">📅 ${optionText(priceBasis(x))}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
-  ${lo?`<div class="low">🏆 過去最安：<span class="historyshop">🏬 ${lo.source}</span><br>${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
+  ${lo?`<div class="low">🏆 過去最安：<span class="historyshop">🏬 ${optionText(sourceLabel(lo.source))}</span><br>${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
   ${x.note?`<div class="note">📝 ${x.note}</div>`:""}
   <div class="cardactions"><button class="cardaction" type="button" data-edit-id="${x.id}">✏️ 編集</button><button class="cardaction history" type="button" data-history-id="${x.id}">🕘 価格履歴</button></div></div>`;
 }
 let editingId=null;
 function optionText(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function sourceOptions(selected){
-  $("editSource").innerHTML=S.map(s=>`<option value="${optionText(s.name)}"${s.name===selected?' selected':''}>${optionText(s.name)}</option>`).join("");
+  $("editSource").innerHTML=S.filter(s=>!s.archived||s.name===selected).map(s=>`<option value="${optionText(s.name)}"${s.name===selected?' selected':''}>${optionText(s.displayName||s.name)}${s.archived?"（一覧から削除済み）":""}</option>`).join("");
 }
 function newRecordId(){return "user-"+(globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`)}
 function recalcEditedItem(item){
@@ -388,7 +389,7 @@ function openEditor(id){
 function renderHistory(item){
   const rows=variantHistory(item);
   $("historyTitle").textContent=`${item.p} ${specification(item)}｜価格履歴`;
-  $("historyList").innerHTML=rows.map(x=>`<div class="historyrow"><div class="historyrowtop"><div class="historyinfo"><b>${Number(x.price)>0?yen(x.price)+"円":"価格未確認"}</b>　🏬 ${optionText(x.source)}<br>${optionText(specification(x))}<br>📅 ${optionText(x.date||"日付不明")}<br>条件：${optionText(recordConditions(x)||"記録なし")}${x.note?`<div class="note">備考：${optionText(x.note)}</div>`:''}${x.originalMemo?`<details><summary>元メモ</summary>${optionText(x.originalMemo)}</details>`:''}</div><button class="historyedit" type="button" data-edit-id="${optionText(x.id)}">編集</button></div></div>`).join("")||'<div class="guide">価格履歴がありません。</div>';
+  $("historyList").innerHTML=rows.map(x=>`<div class="historyrow"><div class="historyrowtop"><div class="historyinfo"><b>${Number(x.price)>0?yen(x.price)+"円":"価格未確認"}</b>　🏬 ${optionText(sourceLabel(x.source))}<br>${optionText(specification(x))}<br>📅 ${optionText(x.date||"日付不明")}<br>条件：${optionText(recordConditions(x)||"記録なし")}${x.note?`<div class="note">備考：${optionText(x.note)}</div>`:''}${x.originalMemo?`<details><summary>元メモ</summary>${optionText(x.originalMemo)}</details>`:''}</div><button class="historyedit" type="button" data-edit-id="${optionText(x.id)}">編集</button></div></div>`).join("")||'<div class="guide">価格履歴がありません。</div>';
   bindCardActions($("historyList"));
 }
 function openHistory(id){const item=D.find(x=>String(x.id)===String(id));if(!item)return;renderHistory(item);$("historyDialog").showModal()}
@@ -439,13 +440,56 @@ $("categoryFilter").onchange=search;
 $("closeDetail").onclick=()=>$("detailDialog").close();
 $("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();search()}});
 function renderSourceResults(source){
+  $("selectedStoreTitle").textContent=source?`${sourceLabel(source)}　${storeCount(source)}商品`:"";
   if(!source){$("sourceResults").innerHTML='<div class="guide">販売元を選んでください。</div>';return}
   currentSource=source;
   $("sourceResults").innerHTML=latest(D.filter(x=>x.source===source)).map(x=>card(x,false)).join("")||'<div class="guide">登録がありません。</div>';
   document.querySelectorAll(".sourcebtn").forEach(b=>b.classList.toggle("active",b.dataset.s===source));
   bindCardActions($("sourceResults"));
 }
-function fillSources(){$("so").innerHTML=S.map(s=>`<option>${s.name}</option>`).join("");$("sourceBtns").innerHTML=S.map(s=>`<button class="sourcebtn" data-s="${s.name}">${s.type==="person"?"👤":"🏬"}${s.name}</button>`).join("");document.querySelectorAll(".sourcebtn").forEach(b=>b.onclick=()=>renderSourceResults(b.dataset.s));if(currentSource)renderSourceResults(currentSource)}
+function sourceLabel(key){const store=S.find(s=>s.name===key);return store?.displayName||key}
+function storeList(){const map=new Map(S.map(s=>[s.name,s]));D.forEach(x=>{if(x.source&&!map.has(x.source))map.set(x.source,{name:x.source,type:'shop'})});return [...map.values()]}
+function storeCount(key){return productMasters(D.filter(x=>x.source===key)).length}
+function fillSources(){
+  const stores=storeList(),active=stores.filter(s=>!s.archived);
+  const selected=$("so").value;
+  $("so").innerHTML=active.map(s=>`<option value="${optionText(s.name)}">${optionText(s.displayName||s.name)}</option>`).join('');
+  if(active.some(s=>s.name===selected))$("so").value=selected;
+  $("sourceBtns").innerHTML=active.map(s=>`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0"><button class="sourcebtn" data-s="${optionText(s.name)}">${optionText(s.displayName||s.name)}　${storeCount(s.name)}商品</button><button class="cardaction" data-store-edit="${optionText(s.name)}">名称変更</button><button class="cardaction" data-store-remove="${optionText(s.name)}">削除</button></div>`).join('');
+  $("archivedStores").innerHTML=stores.filter(s=>s.archived).map(s=>`<p>${optionText(s.displayName||s.name)}　${storeCount(s.name)}商品 <button class="cardaction" data-store-restore="${optionText(s.name)}">一覧へ戻す</button></p>`).join('')||'ありません';
+  document.querySelectorAll('.sourcebtn[data-s]').forEach(b=>b.onclick=()=>renderSourceResults(b.dataset.s));
+  document.querySelectorAll('[data-store-edit]').forEach(b=>b.onclick=()=>openStoreEditor(b.dataset.storeEdit));
+  document.querySelectorAll('[data-store-remove]').forEach(b=>b.onclick=()=>archiveStore(b.dataset.storeRemove));
+  document.querySelectorAll('[data-store-restore]').forEach(b=>b.onclick=()=>saveStoreChange(b.dataset.storeRestore,{archived:false}));
+  if(currentSource&&!active.some(s=>s.name===currentSource))currentSource='';
+  renderSourceResults(currentSource);
+}
+let editingStore=null,storeSaving=false;
+function openStoreEditor(key=null){editingStore=key;$("storeName").value=key?sourceLabel(key):'';$("storeDialogTitle").textContent=key?'販売店名を変更':'販売店を追加';$("storeError").textContent='';$("storeDialog").showModal()}
+async function saveStoreChange(key,patch){
+  if(storeSaving)return false;
+  if(!cloudRef||!cloudReady||!navigator.onLine){$("storeStatus").textContent='Googleログインとオンライン同期完了後に操作してください。';return false}
+  storeSaving=true;$("saveStore").disabled=true;
+  try{
+    const next=storeList().map(s=>({...s})),index=next.findIndex(s=>s.name===key);
+    if(index<0)next.push({name:key,type:'shop',...patch});else Object.assign(next[index],patch);
+    await setDoc(cloudRef,{sources:next,updatedAt:serverTimestamp()},{merge:true});
+    S=next;saveLocal();renderAll();$("storeStatus").textContent='販売店情報を保存・同期しました。価格履歴は保持されています。';return true;
+  }catch(e){$("storeStatus").textContent='保存に失敗しました。変更は確定していません。'+(e.message||'');return false}
+  finally{storeSaving=false;$("saveStore").disabled=false}
+}
+async function archiveStore(key){
+  const count=D.filter(x=>x.source===key).length;
+  if(!confirm(`「${sourceLabel(key)}」を販売店一覧から削除しますか？\n価格履歴${count}件は削除せず保持します。新しい記録の店舗選択から外し、「一覧から削除した販売店」から復元できます。`))return;
+  await saveStoreChange(key,{archived:true});
+}
+$("newStore").onclick=()=>openStoreEditor();$("closeStore").onclick=()=>{if(!storeSaving)$("storeDialog").close()};
+$("storeForm").onsubmit=async e=>{
+  e.preventDefault();const label=$("storeName").value.trim();if(!label)return;
+  const normalized=v=>String(v).normalize('NFKC').trim().toLowerCase();
+  if(storeList().some(s=>s.name!==editingStore&&[s.name,s.displayName].filter(Boolean).some(n=>normalized(n)===normalized(label)))){$("storeError").textContent='同じ名前の販売店が登録されています。削除済みなら一覧へ戻してください。';return}
+  if(await saveStoreChange(editingStore||label,{displayName:label,archived:false}))$("storeDialog").close();else $("storeError").textContent=$("storeStatus").textContent;
+};
 function favs(){$("favResults").innerHTML=productMasters().filter(m=>m.records.some(x=>x.fav)).map(m=>m.current).map(x=>card(x,false)).join("")||'<div class="guide">まだありません。</div>';bindCardActions($("favResults"))}
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n===b));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===b.dataset.p));if(b.dataset.p==="sources")fillSources();if(b.dataset.p==="favorites")favs()});
 let now=new Date();$("dt").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
@@ -468,7 +512,7 @@ $("addPrice").onclick=async()=>{
   alert(saved==="cloud"?"登録して同期しました！":"この端末に登録しました。Googleログイン後に同期されます。");
   ["pn","fn","sc","mf","bn","kw","pr","no"].forEach(id=>$(id).value="");
 }
-$("addSource").onclick=async()=>{let n=$("sn").value.trim();if(!n)return;if(!S.some(s=>s.name===n)){S.push({name:n,type:$("st").value});await saveAll();fillSources();alert("追加しました！")}}
+$("addSource").onclick=()=>openStoreEditor();
 $("backup").onclick=()=>{let a=document.createElement("a"),b=new Blob([JSON.stringify({sources:S,data:D},null,2)],{type:"application/json"});a.href=URL.createObjectURL(b);a.download="底値帳バックアップ.json";a.click()}
 
 $("closeEdit").onclick=()=>$("editDialog").close();
