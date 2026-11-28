@@ -47,14 +47,14 @@ dialog{width:min(680px,calc(100% - 24px));max-height:90vh;border:0;border-radius
 .compacthint{font-size:10px;color:#777}.categoryfilter{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.categoryfilter select{min-width:0;flex:1;min-height:42px;font-size:16px;border:1px solid #bbb;border-radius:10px;background:#fff;padding:7px}
 @media(min-width:700px){#results,#sourceResults,#favResults{grid-template-columns:repeat(3,minmax(0,1fr))}.thumb{height:110px}}
 @media(min-width:1000px){#results,#sourceResults,#favResults{grid-template-columns:repeat(4,minmax(0,1fr))}}
-</style></head><body><div class="app">
+.priceModes{display:flex;gap:10px;margin:12px 0}.priceModes button{min-height:44px;padding:10px 22px;border:2px solid #1769e0;border-radius:12px;background:#fff;color:#174f98;font-weight:900}.priceModes button[aria-pressed="true"]{background:#1769e0;color:#fff}</style></head><body><div class="app">
 <h1>📱 カズ専用・底値帳</h1><div class="sub">Safari用Webアプリ・登録済み商品を一覧表示</div>
 <div class="syncbar"><div class="syncinfo"><b id="syncTitle">☁️ 同期：未接続</b><div id="syncDetail" class="syncdetail">Googleログインすると、PCとiPhoneで同じ底値データを使えます。</div></div><button id="loginBtn" class="syncbtn">Googleでログイン</button><button id="logoutBtn" class="syncbtn secondary" hidden>ログアウト</button></div>
 
 <section id="products" class="panel active">
 <div class="search"><input id="q" placeholder="商品名・俗称・ジャンルなどで検索"><button id="go">検索</button></div>
 <label class="categoryfilter">ジャンル<select id="categoryFilter"><option value="">すべて</option></select></label>
-<p class="compacthint">同じ商品・容量は1カード。日付がある最新記録を表示し、同日の複数価格は最安を表示します。日付不明のみの場合は参考最安価格です。店舗での現在価格を保証するものではありません。</p><div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
+<div class="priceModes" role="group" aria-label="価格表示"><button type="button" id="modeLatest" aria-pressed="true">最新価格</button><button type="button" id="modeLowest" aria-pressed="false">最安値</button></div><p class="compacthint">同じ商品・容量は1カード。日付がある最新記録を表示し、同日の複数価格は最安を表示します。日付不明のみの場合は参考最安価格です。店舗での現在価格を保証するものではありません。</p><div class="listhead"><h2>登録済み商品</h2><div id="productCount" class="count"></div></div>
 <div id="results"></div>
 </section>
 <section id="sources" class="panel"><h2>販売店から探す</h2><button id="newStore" class="sourcebtn">＋販売店を追加</button><div id="storeStatus" role="status"></div><div id="sourceBtns"></div><details><summary>一覧から削除した販売店</summary><div id="archivedStores"></div></details><h3 id="selectedStoreTitle"></h3><div id="sourceResults"></div></section>
@@ -331,7 +331,7 @@ function card(x,best){
   const u=base(x),esc=optionText;
   // Only a dedicated thumbnail is used; never fetch a full-size photo for a list.
   const thumbnail=typeof x.thumbnailUrl==="string"&&/^https:\/\//.test(x.thumbnailUrl)?x.thumbnailUrl:"";
-  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(sourceLabel(x.source))}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactstore">${esc(sourceLabel(x.source)||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">${esc(priceBasis(x))}</span><span class="compacthint">価格履歴 ${variantHistory(x).length}件を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(sourceLabel(x.source))}を編集">✏️ 編集</button></div>`;
+  return `<div class="compactcard ${best?'best':''}"><button type="button" class="compactmain" data-detail-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(sourceLabel(x.source))}の詳細"><span class="thumb" data-image-product="${esc(imageProductId(x))}"><span>画像なし</span>${thumbnail?`<img src="${esc(thumbnail)}" alt="${esc(x.p)}" loading="lazy" decoding="async">`:''}</span><span class="compactname">${x.fav?'⭐ ':''}${esc(x.displayName||x.p)}</span><span class="compactprice">${Number(x.price)>0?`${yen(x.price)}<small> 円</small>`:'<small>価格未確認</small>'}</span><span class="compactstore">${esc(sourceLabel(x.source)||'店舗未確認')}</span><span class="compactspec">${esc(specification(x))}</span><span class="compactunit">${u.v!=null?`${u.v.toFixed(2)} ${esc(u.l)}`:'単価未確認'}</span><span class="compacthint">${esc(best?(Number(x.price)>0?"過去最安（記録上）":"価格未確認"):priceBasis(x))}</span><span class="compacthint">価格履歴 ${variantHistory(x).length}件を見る ›</span></button><button type="button" class="compactedit" data-edit-id="${esc(x.id)}" aria-label="${esc(x.p)}・${esc(sourceLabel(x.source))}を編集">✏️ 編集</button></div>`;
 }
 function detailCard(x,best){
   let h=hist(x),i=h.findIndex(z=>z.id===x.id),prev=i>0&&x.date&&h[i-1].date?h[i-1]:null,
@@ -342,7 +342,7 @@ function detailCard(x,best){
   <div class="pricebox"><div class="price">${Number(x.price)>0?yen(x.price)+'<small style="font-size:12px">円</small>':'<small style="font-size:16px">価格未確認</small>'}</div><div class="unit">${u.v?u.v.toFixed(2)+" "+u.l:""}</div></div></div>
   <div class="meta"><span class="tag">${x.majorCategory||x.cat}</span>${x.minorCategory?`<span class="tag">${x.minorCategory}</span>`:""}</div>
   <div class="brandline">${brandLabel(x)}</div>${productDetails(x)}
-  <div class="date">📅 ${optionText(priceBasis(x))}</div>
+  <div class="date">📅 ${optionText(x.date?((variantHistory(x)[0]?.date===x.date?"最新記録：":"記録日：")+x.date):"参考価格：日付不明の記録")}</div>
   ${del===null?'<div class="delta">➡️ 前回比：記録なし</div>':`<div class="delta ${del<0?"down":del>0?"up":""}">${del<0?"📉":del>0?"📈":"➡️"} 前回より ${del>0?"+":""}${yen(del)}円</div>`}
   ${lo?`<div class="low">🏆 過去最安：<span class="historyshop">🏬 ${optionText(sourceLabel(lo.source))}</span><br>${yen(lo.price)}円　${specification(lo)}　${lo.date||"日付不明"}</div>`:'<div class="low">🏆 過去最安：価格未確認</div>'}
   ${x.note?`<div class="note">📝 ${x.note}</div>`:""}
@@ -405,14 +405,20 @@ function bindCardActions(root=document){
 }
 const normalizeSearch=v=>String(v??"").normalize("NFKC").toLowerCase().replace(/[、,／/|]+/g," ").replace(/\s+/g," ").trim();
 const searchableText=x=>normalizeSearch([x.displayName,x.p,x.formalName,x.majorCategory,x.cat,x.minorCategory,x.manufacturerName,x.brandName,x.searchWords].join(" "));
+let priceMode="latest";
+function displayedRecord(master){
+  if(priceMode!=="lowest")return master.current;
+  return master.records.filter(x=>Number(x.price)>0).reduce((best,x)=>!best||Number(x.price)<Number(best.price)?x:best,null)||master.current;
+}
+function priceOrder(a,b){return (Number(a.price)>0?Number(a.price):Infinity)-(Number(b.price)>0?Number(b.price):Infinity)||0}
 function productGroupMarkup(name,items){
-  return `<div class="group" data-product-key="${optionText(encodeURIComponent(name))}"><h2>${optionText(name)}</h2>${items.map(x=>card(x,false)).join("")}</div>`;
+  return `<div class="group" data-product-key="${optionText(encodeURIComponent(name))}"><h2>${optionText(name)}</h2>${[...items].sort(priceOrder).map(x=>card(x,priceMode==="lowest")).join("")}</div>`;
 }
 function renderOneProductGroup(name){
   const key=encodeURIComponent(name),group=[...document.querySelectorAll("#results .group")].find(el=>el.dataset.productKey===key);
   if(!group)return renderProducts($("q")?.value||"");
   const terms=normalizeSearch($("q")?.value||"").split(" ").filter(Boolean),selected=$("categoryFilter").value;
-  const items=productMasters().filter(m=>m.current.p===name&&m.records.some(x=>(!selected||[x.majorCategory||x.cat,x.minorCategory].includes(selected))&&terms.every(t=>searchableText(x).includes(t)))).map(m=>m.current);if(!items.length)return renderProducts($("q")?.value||"");
+  const items=productMasters().filter(m=>m.current.p===name&&m.records.some(x=>(!selected||[x.majorCategory||x.cat,x.minorCategory].includes(selected))&&terms.every(t=>searchableText(x).includes(t)))).map(displayedRecord);if(!items.length)return renderProducts($("q")?.value||"");
   group.outerHTML=productGroupMarkup(name,items);bindCardActions($("results"));
 }
 function renderOptimisticChange(beforeItem,afterItem){
@@ -430,7 +436,7 @@ function renderProducts(q=""){
   const categories=[...new Set(D.flatMap(x=>[x.majorCategory||x.cat,x.minorCategory]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ja"));
   $("categoryFilter").innerHTML='<option value="">すべて</option>'+categories.map(c=>`<option value="${optionText(c)}">${optionText(c)}</option>`).join("");
   $("categoryFilter").value=categories.includes(selected)?selected:"";
-  let r=productMasters().filter(m=>m.records.some(x=>(!$("categoryFilter").value||[x.majorCategory||x.cat,x.minorCategory].includes($("categoryFilter").value))&&terms.every(t=>searchableText(x).includes(t)))).map(m=>m.current),groups={};
+  let r=productMasters().filter(m=>m.records.some(x=>(!$("categoryFilter").value||[x.majorCategory||x.cat,x.minorCategory].includes($("categoryFilter").value))&&terms.every(t=>searchableText(x).includes(t)))).map(displayedRecord),groups={};
   r.forEach(x=>(groups[x.p]??=[]).push(x));
   let names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ja"));
   $("productCount").textContent=`${r.length}商品バリエーション（${names.length}商品名）`;
@@ -440,6 +446,8 @@ function renderProducts(q=""){
 }
 function search(){renderProducts($("q").value)}
 $("categoryFilter").onchange=search;
+function setPriceMode(mode){priceMode=mode;$("modeLatest").setAttribute("aria-pressed",String(mode==="latest"));$("modeLowest").setAttribute("aria-pressed",String(mode==="lowest"));search()}
+$("modeLatest").onclick=()=>setPriceMode("latest");$("modeLowest").onclick=()=>setPriceMode("lowest");
 $("closeDetail").onclick=()=>$("detailDialog").close();
 $("go").onclick=search;$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();search()}});
 function renderSourceResults(source){
